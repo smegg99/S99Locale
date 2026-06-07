@@ -1,0 +1,22 @@
+# examples/basic/i18n/locales/en/emails.yaml
+
+welcome:
+  subject:
+    value: "Welcome to {product}"
+    placeholders:
+      product: {type: string}
+  body:
+    value: "Hello {name}, your account is ready."
+    placeholders:
+      name: {type: string}
+digest:
+  subject:
+    plural:
+      argument: count
+      forms:
+        zero: "Nothing new"
+        one: "1 new message"
+        other: "{count} new messages"
+    description: "Digest subject line. Counted, and rendered by Go."
+    placeholders:
+      count: {type: integer}

@@ -1,0 +1,21 @@
+# examples/basic/i18n/locales/pl/app.yaml
+
+title:
+  value: "Przykład"
+greeting:
+  value: "Cześć {name}"
+  description: "Shown on the dashboard after sign in"
+  placeholders:
+    name: {type: string}
+files:
+  plural:
+    argument: count
+    forms:
+      zero: "Brak plików"
+      one: "{count} plik"
+      few: "{count} pliki"
+      many: "{count} plików"
+      other: "{count} pliku"
+  description: "File count. Polish needs all four CLDR bands."
+  placeholders:
+    count: {type: integer}

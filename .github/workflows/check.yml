@@ -1,0 +1,35 @@
+name: check
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # check-version compares VERSION against the tag on HEAD, and
+          # git describe needs the tags to be present.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      # Node runs the generated plural index against Intl.PluralRules, which is
+      # CLDR. The version floor is load-bearing rather than incidental: the test
+      # skips below Node 23, and a skipped run is a green job with the plural
+      # guarantee unverified. That is the exact shape of the failure that let
+      # the Czech and Russian rules ship wrong.
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - uses: extractions/setup-just@v3
+
+      - run: just check

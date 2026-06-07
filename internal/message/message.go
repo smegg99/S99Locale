@@ -1,0 +1,194 @@
+// internal/message/message.go
+
+// Package message is the neutral AST.
+//
+// Nothing here knows about vue-i18n or go-i18n. A canonical message is parsed
+// into these types once and every generator reads from them, so no runtime's
+// syntax reaches the source files.
+package message
+
+import "fmt"
+
+type Kind string
+
+const (
+	KindPlain  Kind = "plain"
+	KindPlural Kind = "plural"
+)
+
+type Target string
+
+const (
+	TargetBackend Target = "backend"
+	TargetWeb     Target = "web"
+	TargetDesktop Target = "desktop"
+)
+
+var AllTargets = []Target{TargetBackend, TargetWeb, TargetDesktop}
+
+func ParseTarget(s string) (Target, error) {
+	for _, t := range AllTargets {
+		if Target(s) == t {
+			return t, nil
+		}
+	}
+	return "", fmt.Errorf("unknown target %q", s)
+}
+
+type PlaceholderType string
+
+const (
+	TypeString  PlaceholderType = "string"
+	TypeInteger PlaceholderType = "integer"
+	TypeNumber  PlaceholderType = "number"
+)
+
+func ParsePlaceholderType(s string) (PlaceholderType, error) {
+	switch PlaceholderType(s) {
+	case TypeString, TypeInteger, TypeNumber:
+		return PlaceholderType(s), nil
+	}
+	return "", fmt.Errorf("unknown placeholder type %q", s)
+}
+
+type Placeholder struct {
+	Name string
+	Type PlaceholderType
+}
+
+// Category is a CLDR plural category, plus Zero.
+//
+// CLDR has a zero category, but no locale we target selects it: Polish resolves
+// a count of 0 to Many. It is kept as an opt-in band that the generated code
+// branches on, never something a plural rule picks.
+type Category string
+
+const (
+	CatZero  Category = "zero"
+	CatOne   Category = "one"
+	CatTwo   Category = "two"
+	CatFew   Category = "few"
+	CatMany  Category = "many"
+	CatOther Category = "other"
+)
+
+// CategoryOrder is the band order for every generated pipe string and index function.
+var CategoryOrder = []Category{CatZero, CatOne, CatTwo, CatFew, CatMany, CatOther}
+
+func ParseCategory(s string) (Category, error) {
+	for _, c := range CategoryOrder {
+		if Category(s) == c {
+			return c, nil
+		}
+	}
+	return "", fmt.Errorf("unknown plural category %q", s)
+}
+
+type Plural struct {
+	// Argument names the placeholder the count comes from, per message ("count" or "n").
+	Argument string
+	Forms    map[Category]string
+}
+
+// Categories returns the declared categories in band order.
+func (p *Plural) Categories() []Category {
+	var out []Category
+	for _, c := range CategoryOrder {
+		if _, ok := p.Forms[c]; ok {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+type Sharing struct {
+	Isolate bool
+	Reason  string
+}
+
+type Source struct {
+	File string `json:"file"`
+	Line int    `json:"line,omitempty"`
+	Col  int    `json:"col,omitempty"`
+}
+
+func (s Source) String() string {
+	if s.Line == 0 {
+		return s.File
+	}
+	if s.Col == 0 {
+		return fmt.Sprintf("%s:%d", s.File, s.Line)
+	}
+	return fmt.Sprintf("%s:%d:%d", s.File, s.Line, s.Col)
+}
+
+// Message is one key in one locale. The same key in another locale is a
+// separate Message; validation compares them.
+type Message struct {
+	Key          string
+	Locale       string
+	Namespace    string
+	Kind         Kind
+	Value        string
+	Plural       *Plural
+	Description  string
+	Placeholders map[string]Placeholder
+	Targets      []Target // empty means inherit from the namespace
+	Deprecated   bool
+	Sharing      Sharing
+	Source       Source
+	// Root is the index of the source root this came from.
+	Root int
+}
+
+// Text returns every rendered string in the message, for placeholder checks.
+func (m *Message) Text() []string {
+	if m.Kind == KindPlain {
+		return []string{m.Value}
+	}
+	out := make([]string, 0, len(m.Plural.Forms))
+	for _, c := range m.Plural.Categories() {
+		out = append(out, m.Plural.Forms[c])
+	}
+	return out
+}
+
+// Set is every message, keyed by locale then fully qualified key.
+type Set struct {
+	Locales  []string
+	Messages map[string]map[string]*Message
+}
+
+func NewSet(locales []string) *Set {
+	s := &Set{Locales: locales, Messages: map[string]map[string]*Message{}}
+	for _, l := range locales {
+		s.Messages[l] = map[string]*Message{}
+	}
+	return s
+}
+
+// Keys returns every key in any locale, sorted, so output does not depend on map order.
+func (s *Set) Keys() []string {
+	seen := map[string]struct{}{}
+	for _, byKey := range s.Messages {
+		for k := range byKey {
+			seen[k] = struct{}{}
+		}
+	}
+	return sortedKeys(seen)
+}
+
+func (s *Set) Get(locale, key string) (*Message, bool) {
+	m, ok := s.Messages[locale][key]
+	return m, ok
+}
+
+// Namespace is the first segment of a key; ownership and filtering use it.
+func Namespace(key string) string {
+	for i := range len(key) {
+		if key[i] == '.' {
+			return key[:i]
+		}
+	}
+	return key
+}

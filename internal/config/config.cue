@@ -1,0 +1,65 @@
+// internal/config/config.cue
+
+package config
+
+#Config: {
+	// The locale everything falls back to. Must appear in locales.
+	defaultLocale: string
+
+	locales: [...string] & [_, ...]
+	targets: [...#Target] & [_, ...]
+
+	// Canonical roots, in order. A later root overrides an earlier one, which
+	// is how an app overrides a library's string.
+	roots: [...string] & [_, ...]
+
+	// Generated artefacts. Disposable and gitignored. Relative to this file, so
+	// the default lands beside it rather than in a second i18n/ beneath it.
+	output: string | *"generated"
+
+	// Namespace ownership. A namespace with no entry reaches every target: a
+	// spare string costs bytes, a dropped one costs a translation.
+	namespaces: [string]: #Namespace
+
+	// Keys built at runtime, which no source scan can find. Declaring them
+	// keeps them out of the unused report. A trailing dot covers everything
+	// beneath it: "status." covers status.pending and the rest.
+	dynamicKeys: [...string]
+
+	// Directories to scan for key references. Empty disables scanning, and
+	// then unused and missing keys are simply not reported - better than a
+	// report built from nothing.
+	scan: [...string]
+
+	// Extra reference patterns, for a repo whose own helpers name keys. Each
+	// is a Go regexp with exactly one capture group holding the key.
+	//
+	// The built-in patterns cover t(), $t(), apierr.New/Wrap and the generated
+	// Go accessors. A wrapper around any of those is invisible without this.
+	keyPatterns: [...string]
+
+	// Generate a pseudolocale alongside the real ones, to surface hardcoded
+	// strings, layout overflow and missing glyphs before a translator sees it.
+	pseudolocale: bool | *false
+
+	web: #Web
+	go: #Go @go(Go)
+}
+
+#Target: "backend" | "web" | "desktop"
+
+#Namespace: {
+	targets: [...#Target]
+}
+
+#Web: {
+	// Written next to the generated locales. The band order in the generated
+	// strings is meaningless without it.
+	pluralsFile: string | *"plurals.gen.ts"
+	keysFile:    string | *"keys.gen.ts"
+}
+
+#Go: {
+	// Package name for generated Go. Empty disables Go codegen.
+	package: string | *"messages"
+}
