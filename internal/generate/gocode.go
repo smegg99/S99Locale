@@ -44,7 +44,7 @@ func GoCode(out *Output, cfg *config.Config, set *message.Set) error {
 	if err != nil {
 		return err
 	}
-	out.Add("go/messages_gen.go", src)
+	out.Add(goLayout(cfg).messages(), src)
 
 	return keysFile(out, cfg, msgs, names)
 }
@@ -57,13 +57,21 @@ func keysFile(out *Output, cfg *config.Config, msgs []*message.Message, names ma
 	for _, m := range msgs {
 		fmt.Fprintf(&b, "\tKey%s = %q\n", names[m.Key], m.Key)
 	}
-	b.WriteString(")\n")
+	b.WriteString(")\n\n")
+
+	fmt.Fprintf(&b, "// DefaultLocale is the locale a missing translation falls back to.\nconst DefaultLocale = %q\n\n",
+		cfg.DefaultLocale)
+	b.WriteString("// Locales are every locale this catalogue was built for, in config order.\nvar Locales = []string{\n")
+	for _, locale := range cfg.BuildLocales() {
+		fmt.Fprintf(&b, "\t%q,\n", locale)
+	}
+	b.WriteString("}\n")
 
 	src, err := gofmt(b.String())
 	if err != nil {
 		return err
 	}
-	out.Add("go/keys_gen.go", src)
+	out.Add(goLayout(cfg).keys(), src)
 	return nil
 }
 

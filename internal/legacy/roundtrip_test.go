@@ -142,7 +142,7 @@ func build(t *testing.T, cfg *config.Config) *generate.Output {
 	if _, _, err := out.Write(); err != nil {
 		t.Fatal(err)
 	}
-	return out
+	return out.Primary
 }
 
 func bundles(out *generate.Output) map[string][]byte {

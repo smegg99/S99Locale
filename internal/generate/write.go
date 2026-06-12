@@ -28,9 +28,21 @@ type Output struct {
 	Dir   string
 	files []File
 	fs    fileSystem
+
+	// owns reports whether a path under Dir is loc's to remove. Nil means the
+	// whole tree is, which is true of the output directory. A Go package that
+	// holds hand-written source beside the generated bundle supplies one.
+	owns func(rel string) bool
 }
 
 func NewOutput(dir string) *Output { return &Output{Dir: dir, fs: osFS{}} }
+
+// NewSharedOutput is an output in a directory loc does not own outright. Only
+// paths the predicate accepts are ever removed; everything else is left alone,
+// and the directory itself is never pruned.
+func NewSharedOutput(dir string, owns func(rel string) bool) *Output {
+	return &Output{Dir: dir, fs: osFS{}, owns: owns}
+}
 
 func (o *Output) Add(rel string, body []byte) {
 	o.files = append(o.files, File{Path: rel, Bytes: body})
@@ -85,6 +97,10 @@ func (o *Output) Write() (written, removed int, err error) {
 			return written, removed, err
 		}
 		removed++
+	}
+	if o.owns != nil {
+		// Not loc's directory to tidy: an empty `locales/` is still the app's.
+		return written, removed, nil
 	}
 	return written, removed, pruneEmptyDirs(o.Dir)
 }
@@ -192,9 +208,13 @@ func (o *Output) orphans() ([]string, error) {
 		if strings.HasPrefix(filepath.Base(rel), tempPrefix) {
 			return nil
 		}
-		if _, ok := want[rel]; !ok {
-			extra = append(extra, rel)
+		if _, ok := want[rel]; ok {
+			return nil
 		}
+		if o.owns != nil && !o.owns(rel) {
+			return nil
+		}
+		extra = append(extra, rel)
 		return nil
 	})
 	if err != nil {

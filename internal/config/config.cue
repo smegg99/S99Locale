@@ -62,4 +62,16 @@ package config
 #Go: {
 	// Package name for generated Go. Empty disables Go codegen.
 	package: string | *"messages"
+
+	// Where the Go target is written. Empty leaves it under `output` with every
+	// other target.
+	//
+	// go:embed cannot reach outside its own package, so a Go consumer either
+	// copies the bundle into the package that embeds it or points this at that
+	// package. Relative to this file, and it may sit outside `output`.
+	//
+	// loc owns `*_gen.go` beside your own sources there, and the whole
+	// `locales/` directory inside it. Everything else in that package is yours
+	// and is never read, written or removed.
+	output: string | *""
 }

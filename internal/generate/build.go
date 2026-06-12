@@ -34,8 +34,16 @@ type TargetManifest struct {
 //
 // ctx is checked per target: each one is a whole bundle, which is the unit a
 // cancellation can usefully land between.
-func Build(ctx context.Context, cfg *config.Config, set *message.Set) (*Output, error) {
+func Build(ctx context.Context, cfg *config.Config, set *message.Set) (*Outputs, error) {
 	out := NewOutput(cfg.AbsOutput())
+	outs := &Outputs{Primary: out}
+	// The Go target may be written into the package that embeds it, which loc
+	// shares with hand-written source rather than owning outright.
+	goOut := out
+	if dir := cfg.AbsGoOutput(); dir != "" {
+		goOut = NewSharedOutput(dir, Owns)
+		outs.Go = goOut
+	}
 
 	set, err := withPseudolocale(cfg, set)
 	if err != nil {
@@ -48,10 +56,10 @@ func Build(ctx context.Context, cfg *config.Config, set *message.Set) (*Output, 
 		}
 		switch target {
 		case message.TargetBackend:
-			if err := GoBundle(out, cfg, set); err != nil {
+			if err := GoBundle(goOut, cfg, set); err != nil {
 				return nil, err
 			}
-			if err := GoCode(out, cfg, set); err != nil {
+			if err := GoCode(goOut, cfg, set); err != nil {
 				return nil, err
 			}
 		case message.TargetWeb, message.TargetDesktop:
@@ -72,7 +80,7 @@ func Build(ctx context.Context, cfg *config.Config, set *message.Set) (*Output, 
 	if err := addManifest(out, cfg, set); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return outs, nil
 }
 
 func addManifest(out *Output, cfg *config.Config, set *message.Set) error {

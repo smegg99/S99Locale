@@ -46,7 +46,7 @@ func GoBundle(out *Output, cfg *config.Config, set *message.Set) error {
 			}
 		}
 
-		if err := out.AddJSON(fmt.Sprintf("backend/%s.json", locale), bundle); err != nil {
+		if err := out.AddJSON(goLayout(cfg).bundle(locale), bundle); err != nil {
 			return err
 		}
 	}

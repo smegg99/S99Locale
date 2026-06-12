@@ -62,7 +62,7 @@ func project(t *testing.T, files map[string]string) (*config.Config, *generate.O
 	if err != nil {
 		t.Fatal(err)
 	}
-	return cfg, out
+	return cfg, out.Primary
 }
 
 func file(t *testing.T, out *generate.Output, path string) []byte {

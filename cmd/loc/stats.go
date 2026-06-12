@@ -75,7 +75,7 @@ func printMissing(cfg *config.Config, set *message.Set, keys []string) {
 	}
 }
 
-func printSizes(out *generate.Output) {
+func printSizes(out *generate.Outputs) {
 	fmt.Println("\ngenerated size")
 
 	total := 0

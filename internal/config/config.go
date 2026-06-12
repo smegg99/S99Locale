@@ -36,6 +36,7 @@ type Web struct {
 
 type Go struct {
 	Package string `json:"package"`
+	Output  string `json:"output"`
 }
 
 type Config struct {
@@ -142,6 +143,15 @@ func (c *Config) AbsRoots() []string {
 }
 
 func (c *Config) AbsOutput() string { return c.abs(c.Output) }
+
+// AbsGoOutput resolves where the Go target is written, or "" when it stays
+// under AbsOutput with everything else.
+func (c *Config) AbsGoOutput() string {
+	if c.Go.Output == "" {
+		return ""
+	}
+	return c.abs(c.Go.Output)
+}
 
 // AbsScan resolves the scan roots against the config's directory.
 func (c *Config) AbsScan() []string {

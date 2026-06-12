@@ -173,7 +173,7 @@ func localesProject(t *testing.T, locales []string) *generate.Output {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return out
+	return out.Primary
 }
 
 // casesJSON takes each pipe string from the generated bundle, so the shipped band order is tested.

@@ -217,7 +217,7 @@ func TestPseudolocaleIsGeneratedNotAuthored(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	web := jsonFile(t, out, "web/pseudo/common.json")
+	web := jsonFile(t, out.Primary, "web/pseudo/common.json")
 	common := web["common"].(map[string]any)
 
 	greeting, _ := common["greeting"].(string)
@@ -229,14 +229,14 @@ func TestPseudolocaleIsGeneratedNotAuthored(t *testing.T) {
 	}
 
 	// The real locales are untouched.
-	real := jsonFile(t, out, "web/en/common.json")
+	real := jsonFile(t, out.Primary, "web/en/common.json")
 	if real["common"].(map[string]any)["greeting"] != "Hello {name}" {
 		t.Fatal("the source locale was pseudolocalised")
 	}
 
 	// And it is listed in the manifest, or a consumer cannot find it.
 	var man map[string]any
-	if err := json.Unmarshal(file(t, out, "manifest.json"), &man); err != nil {
+	if err := json.Unmarshal(file(t, out.Primary, "manifest.json"), &man); err != nil {
 		t.Fatal(err)
 	}
 	locales := man["locales"].([]any)
