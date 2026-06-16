@@ -56,7 +56,6 @@ func rootCmd() *cobra.Command {
 		},
 		importCmd(&configPath),
 		lintCmd(&configPath),
-		refactorCmd(&configPath),
 		&cobra.Command{
 			Use:   "watch",
 			Short: "Rebuild on every change until interrupted",
@@ -94,27 +93,6 @@ func checkCmd(configPath *string, strict *bool) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&asJSON, "json", false, "machine-readable output")
-
-	return cmd
-}
-
-func refactorCmd(configPath *string) *cobra.Command {
-	var to string
-
-	cmd := &cobra.Command{
-		Use:   "refactor-shared <key> [key...] --to <key>",
-		Short: "Plan a rename, as a patch",
-		Long: "Prints what would change and never writes. Refuses when the messages\n" +
-			"are not the same, when the destination says something else, or when a\n" +
-			"key is reachable dynamically and its references cannot all be found.",
-		Args: cobra.MinimumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return cmdRefactorShared(cmd.Context(), *configPath, args, to)
-		},
-	}
-
-	cmd.Flags().StringVar(&to, "to", "", "destination key")
-	_ = cmd.MarkFlagRequired("to")
 
 	return cmd
 }

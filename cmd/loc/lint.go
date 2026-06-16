@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/smegg99/s99locale/internal/config"
+	"github.com/smegg99/s99locale/internal/generate"
 	"github.com/smegg99/s99locale/internal/message"
 	"github.com/smegg99/s99locale/internal/scan"
 	"github.com/smegg99/s99locale/internal/shared"
@@ -205,4 +206,23 @@ func deprecatedInUse(cfg *config.Config, set *message.Set, refs *scan.Result) []
 		out = append(out, refs.Refs[key]...)
 	}
 	return out
+}
+
+// references scans for key usages, mapping generated Go names back to keys.
+func references(cfg *config.Config, set *message.Set) (*scan.Result, error) {
+	if len(cfg.Scan) == 0 {
+		return &scan.Result{Refs: map[string][]scan.Reference{}}, nil
+	}
+
+	extra, err := scan.Compile(cfg.KeyPatterns)
+	if err != nil {
+		return nil, err
+	}
+
+	return scan.Run(scan.Options{
+		Roots:     cfg.AbsScan(),
+		Generated: cfg.AbsOutput(),
+		GoNames:   generate.GoNames(cfg, set),
+		Extra:     extra,
+	})
 }

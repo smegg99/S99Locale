@@ -207,18 +207,6 @@ func TestUnknownCommandIsRejected(t *testing.T) {
 	}
 }
 
-// refactor-shared requires --to, or it would silently plan nothing.
-func TestRefactorRequiresADestination(t *testing.T) {
-	cmd := rootCmd()
-	cmd.SetArgs([]string{"refactor-shared", "a.b"})
-	cmd.SetOut(&bytes.Buffer{})
-	cmd.SetErr(&bytes.Buffer{})
-
-	if err := cmd.Execute(); err == nil {
-		t.Fatal("refactor-shared ran without --to")
-	}
-}
-
 // main maps errFailed to exit 1 and everything else to exit 2, so CI can tell a failing check
 // from a broken job.
 func TestStaleOutputAndBrokenConfigFailDifferently(t *testing.T) {
