@@ -54,10 +54,6 @@ var rules = map[string]Rule{
 	"sl": {Required: []message.Category{message.CatOne, message.CatTwo, message.CatFew, message.CatOther}},
 	"ga": {Required: []message.Category{message.CatOne, message.CatTwo, message.CatFew, message.CatMany, message.CatOther}},
 	"he": {Required: []message.Category{message.CatOne, message.CatTwo, message.CatOther}},
-
-	// The generated pseudolocale. Two bands, matching the default locale's
-	// usual shape: it exists to test layout and glyph coverage, not grammar.
-	"pseudo": {Required: []message.Category{message.CatOne, message.CatOther}},
 }
 
 // Base strips a region: pl-PL and pl share plural rules.

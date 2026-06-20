@@ -184,96 +184,14 @@ func TestGeneratedGoIsGofmtStable(t *testing.T) {
 	}
 }
 
-const pseudoCfg = cfgBody + "\npseudolocale: true\n"
-
-// The pseudolocale is generated, so it appears in the output without ever
-// existing in the canonical source.
-func TestPseudolocaleIsGeneratedNotAuthored(t *testing.T) {
-	dir := t.TempDir()
-	for name, body := range fixture {
-		full := filepath.Join(dir, "locales", name)
-		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(full, []byte(body), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	path := filepath.Join(dir, "config.cue")
-	if err := os.WriteFile(path, []byte(pseudoCfg), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	cfg, err := config.Load(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	res, err := parse.Roots(context.Background(), cfg.AbsRoots(), cfg.Locales)
-	if err != nil {
-		t.Fatal(err)
-	}
-	out, err := generate.Build(context.Background(), cfg, res.Set)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	web := jsonFile(t, out.Primary, "web/pseudo/common.json")
-	common := web["common"].(map[string]any)
-
-	greeting, _ := common["greeting"].(string)
-	if !strings.HasPrefix(greeting, "[") || !strings.HasSuffix(greeting, "]") {
-		t.Fatalf("greeting = %q, want it bracketed", greeting)
-	}
-	if !strings.Contains(greeting, "{name}") {
-		t.Fatalf("placeholder lost: %q", greeting)
-	}
-
-	// The real locales are untouched.
-	real := jsonFile(t, out.Primary, "web/en/common.json")
-	if real["common"].(map[string]any)["greeting"] != "Hello {name}" {
-		t.Fatal("the source locale was pseudolocalised")
-	}
-
-	// And it is listed in the manifest, or a consumer cannot find it.
-	var man map[string]any
-	if err := json.Unmarshal(file(t, out.Primary, "manifest.json"), &man); err != nil {
-		t.Fatal(err)
-	}
-	locales := man["locales"].([]any)
-	found := false
-	for _, l := range locales {
-		if l == "pseudo" {
-			found = true
-		}
-	}
-	if !found {
-		t.Fatalf("manifest locales = %v", locales)
-	}
-}
-
-// Off by default: a pseudolocale in a production bundle is dead weight.
-func TestPseudolocaleIsOffByDefault(t *testing.T) {
-	_, out := project(t, fixture)
-
-	for _, f := range out.Files() {
-		if strings.Contains(f.Path, "pseudo") {
-			t.Fatalf("%s was generated without asking", f.Path)
-		}
-	}
-}
-
-// The bug: switching pseudolocale off stopped generating the locale but left
-// the directory on disk. An app globbing the output swept it back up, and a
-// language nobody generates was back in the language menu - with `loc check`
-// reporting every file current, because it only ever looked at files it meant
-// to write.
+// Dropping a locale removes its recorded files and directory.
 func TestWriteRemovesOutputItNoLongerProduces(t *testing.T) {
 	_, out := project(t, fixture)
 	if _, _, err := out.Write(); err != nil {
 		t.Fatal(err)
 	}
 
-	orphanDir := filepath.Join(out.Dir, "web", "pseudo")
+	orphanDir := filepath.Join(out.Dir, "web", "de")
 	if err := os.MkdirAll(orphanDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -286,7 +204,7 @@ func TestWriteRemovesOutputItNoLongerProduces(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(stale) != 1 || stale[0] != filepath.Join("web", "pseudo", "common.json") {
+	if len(stale) != 1 || stale[0] != filepath.Join("web", "de", "common.json") {
 		t.Fatalf("check did not report the orphan: %v", stale)
 	}
 

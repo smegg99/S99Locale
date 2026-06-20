@@ -45,11 +45,6 @@ func Build(ctx context.Context, cfg *config.Config, set *message.Set) (*Outputs,
 		outs.Go = goOut
 	}
 
-	set, err := withPseudolocale(cfg, set)
-	if err != nil {
-		return nil, err
-	}
-
 	for _, target := range cfg.Targets {
 		if err := ctx.Err(); err != nil {
 			return nil, err
@@ -88,7 +83,7 @@ func addManifest(out *Output, cfg *config.Config, set *message.Set) error {
 		SchemaVersion: 1,
 		SourceHash:    sourceHash(cfg, set),
 		DefaultLocale: cfg.DefaultLocale,
-		Locales:       cfg.BuildLocales(),
+		Locales:       cfg.Locales,
 		Targets:       map[string]TargetManifest{},
 		Files:         map[string]string{},
 	}

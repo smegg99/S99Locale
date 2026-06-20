@@ -17,7 +17,7 @@ import (
 // go-i18n interpolates with text/template, so canonical {name} becomes
 // {{.Name}} here rather than in the source, which also has to reach vue-i18n.
 func GoBundle(out *Output, cfg *config.Config, set *message.Set) error {
-	for _, locale := range cfg.BuildLocales() {
+	for _, locale := range cfg.Locales {
 		rule, err := plural.For(locale)
 		if err != nil {
 			return err

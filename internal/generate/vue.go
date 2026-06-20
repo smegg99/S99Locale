@@ -21,7 +21,7 @@ import (
 func Vue(out *Output, cfg *config.Config, set *message.Set, target message.Target) error {
 	dir := string(target)
 
-	for _, locale := range cfg.BuildLocales() {
+	for _, locale := range cfg.Locales {
 		rule, err := plural.For(locale)
 		if err != nil {
 			return err

@@ -19,7 +19,6 @@ import (
 
 	"github.com/smegg99/s99locale/internal/message"
 	"github.com/smegg99/s99locale/internal/plural"
-	"github.com/smegg99/s99locale/internal/pseudo"
 )
 
 //go:embed config.cue
@@ -49,7 +48,6 @@ type Config struct {
 	DynamicKeys   []string             `json:"dynamicKeys"`
 	Scan          []string             `json:"scan"`
 	KeyPatterns   []string             `json:"keyPatterns"`
-	Pseudolocale  bool                 `json:"pseudolocale"`
 	Web           Web                  `json:"web"`
 	Go            Go                   `json:"go"`
 
@@ -118,19 +116,6 @@ func (c *Config) check() error {
 		}
 	}
 	return nil
-}
-
-// BuildLocales is what generation writes: the configured locales, plus the
-// pseudolocale when it is on.
-//
-// Validation deliberately uses Locales instead. The pseudolocale is generated,
-// so it is complete by construction and comparing it against the source would
-// only ever report the padding.
-func (c *Config) BuildLocales() []string {
-	if !c.Pseudolocale {
-		return c.Locales
-	}
-	return append(slices.Clone(c.Locales), pseudo.Locale)
 }
 
 // AbsRoots resolves the canonical roots against the config's directory.

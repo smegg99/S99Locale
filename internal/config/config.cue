@@ -38,10 +38,6 @@ package config
 	// Go accessors. A wrapper around any of those is invisible without this.
 	keyPatterns: [...string]
 
-	// Generate a pseudolocale alongside the real ones, to surface hardcoded
-	// strings, layout overflow and missing glyphs before a translator sees it.
-	pseudolocale: bool | *false
-
 	web: #Web
 	go: #Go @go(Go)
 }

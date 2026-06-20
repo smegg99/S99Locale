@@ -62,7 +62,7 @@ func keysFile(out *Output, cfg *config.Config, msgs []*message.Message, names ma
 	fmt.Fprintf(&b, "// DefaultLocale is the locale a missing translation falls back to.\nconst DefaultLocale = %q\n\n",
 		cfg.DefaultLocale)
 	b.WriteString("// Locales are every locale this catalogue was built for, in config order.\nvar Locales = []string{\n")
-	for _, locale := range cfg.BuildLocales() {
+	for _, locale := range cfg.Locales {
 		fmt.Fprintf(&b, "\t%q,\n", locale)
 	}
 	b.WriteString("}\n")

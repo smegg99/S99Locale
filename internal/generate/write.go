@@ -176,9 +176,9 @@ func (o *Output) Diff() ([]string, error) {
 //
 // Everything under the output directory belongs to loc - `loc clean` deletes
 // the whole tree - so anything left behind is output from a config that no
-// longer holds. Leaving it is not harmless: switching pseudolocale off left a
-// full locale on disk, an app's `import.meta.glob` swept it back up, and a
-// language nobody generates reappeared in the language menu.
+// longer holds. Leaving it is not harmless: a locale that stopped being
+// generated left a full directory on disk, an app's `import.meta.glob` swept
+// it back up, and a language nobody generates reappeared in the language menu.
 func (o *Output) orphans() ([]string, error) {
 	want := make(map[string]struct{}, len(o.files))
 	for _, f := range o.Files() {

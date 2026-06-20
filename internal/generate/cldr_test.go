@@ -15,7 +15,6 @@ import (
 	"github.com/smegg99/s99locale/internal/generate"
 	"github.com/smegg99/s99locale/internal/parse"
 	"github.com/smegg99/s99locale/internal/plural"
-	"github.com/smegg99/s99locale/internal/pseudo"
 )
 
 // The generated index function must pick the same band as go-i18n's CLDR rules for every locale.
@@ -75,7 +74,7 @@ if (bad.length) { console.error(bad.join('\n')); process.exit(1) }
 func TestGeneratedIndexAgreesWithCLDRForEveryLocale(t *testing.T) {
 	node := requireNode(t)
 
-	locales := authoredLocales()
+	locales := plural.Locales()
 	out := localesProject(t, locales)
 
 	dir := t.TempDir()
@@ -99,33 +98,6 @@ func TestZeroBandShiftsEveryOtherIndex(t *testing.T) {
 	if output, err := runNode(node, dir); err != nil {
 		t.Fatalf("zero band indexing is wrong:\n%s", output)
 	}
-}
-
-// The pseudolocale is not a language tag. Intl.PluralRules does not reject it,
-// it falls back to the host's locale, so an unpinned tag would make the band
-// count depend on the machine that ran the build.
-func TestPseudolocaleSelectsUnderAPinnedTag(t *testing.T) {
-	out := localesProject(t, []string{"en"})
-	src := string(file(t, out, "web/plurals.gen.ts"))
-
-	if !strings.Contains(src, "function plural_pseudo") {
-		t.Fatal("no pseudolocale index function")
-	}
-	if !strings.Contains(src, "band('en', cats_pseudo") {
-		t.Fatalf("the pseudolocale does not select under a pinned tag:\n%s", src)
-	}
-}
-
-// authoredLocales is the table minus the generated pseudolocale, which is added
-// by the build rather than written into a config.
-func authoredLocales() []string {
-	var out []string
-	for _, l := range plural.Locales() {
-		if l != pseudo.Locale {
-			out = append(out, l)
-		}
-	}
-	return out
 }
 
 // localesProject builds a project with one plural per locale, each form named after its category.
@@ -154,7 +126,7 @@ func localesProject(t *testing.T, locales []string) *generate.Output {
 	}
 	cfgPath := filepath.Join(dir, "config.cue")
 	writeFile(t, cfgPath, fmt.Appendf(nil,
-		"defaultLocale: \"en\"\nlocales: [%s]\ntargets: [\"web\"]\nroots: [\"locales\"]\noutput: \"generated\"\npseudolocale: true\n",
+		"defaultLocale: \"en\"\nlocales: [%s]\ntargets: [\"web\"]\nroots: [\"locales\"]\noutput: \"generated\"\n",
 		strings.Join(quoted, ", ")))
 
 	cfg, err := config.Load(cfgPath)
