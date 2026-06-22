@@ -99,7 +99,6 @@ func TestPlainMessageMetadata(t *testing.T) {
 loginFailed:
   value: "Could not sign in as {email}"
   description: "After a failed login"
-  deprecated: true
   targets: [web, backend]
   placeholders:
     email: {type: string}
@@ -113,7 +112,7 @@ loginFailed:
 	if m.Kind != message.KindPlain {
 		t.Fatalf("kind = %v", m.Kind)
 	}
-	if m.Description != "After a failed login" || !m.Deprecated {
+	if m.Description != "After a failed login" {
 		t.Fatalf("metadata lost: %+v", m)
 	}
 	if len(m.Targets) != 2 || m.Targets[0] != message.TargetBackend {

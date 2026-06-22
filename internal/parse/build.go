@@ -52,14 +52,6 @@ func buildMessage(node map[string]any, key, path, locale, file string, lines lin
 		m.Description = text
 	}
 
-	if raw, ok := node["deprecated"]; ok {
-		flag, ok := raw.(bool)
-		if !ok {
-			return nil, fail(CodeSchema, "`deprecated` must be a boolean")
-		}
-		m.Deprecated = flag
-	}
-
 	if raw, ok := node["placeholders"]; ok {
 		ph, err := buildPlaceholders(raw)
 		if err != nil {

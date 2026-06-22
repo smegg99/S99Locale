@@ -148,7 +148,6 @@ func cmdLintKeys(ctx context.Context, configPath string, asJSON bool) error {
 	declared := set.Keys()
 	unused := scan.Unused(declared, refs, cfg.DynamicKeys)
 	missing := scan.Missing(declared, refs)
-	deprecated := deprecatedInUse(cfg, set, refs)
 
 	if asJSON {
 		enc := json.NewEncoder(os.Stdout)
@@ -157,24 +156,15 @@ func cmdLintKeys(ctx context.Context, configPath string, asJSON bool) error {
 			"filesScanned": refs.Files,
 			"unused":       unused,
 			"missing":      missing,
-			"deprecated":   deprecated,
 		})
 	}
 
 	fmt.Printf("scanned %d file(s) in %d root(s)\n", refs.Files, len(cfg.Scan))
 
-	// A reference to a key nobody declares renders the raw key, so this is the
-	// one of the three that is always a bug.
+	// An undeclared key renders raw, so this class is always a bug.
 	if len(missing) > 0 {
 		fmt.Printf("\nI18N030 referenced but not declared\n\n")
 		for _, ref := range missing {
-			fmt.Printf("  %-40s %s:%d\n", ref.Key, ref.File, ref.Line)
-		}
-	}
-
-	if len(deprecated) > 0 {
-		fmt.Printf("\nI18N031 deprecated key still referenced\n\n")
-		for _, ref := range deprecated {
 			fmt.Printf("  %-40s %s:%d\n", ref.Key, ref.File, ref.Line)
 		}
 	}
@@ -188,24 +178,10 @@ func cmdLintKeys(ctx context.Context, configPath string, asJSON bool) error {
 		fmt.Println("  rather than deleting it.")
 	}
 
-	if len(missing)+len(deprecated)+len(unused) == 0 {
+	if len(missing)+len(unused) == 0 {
 		fmt.Println("loc: every declared key is referenced, and every reference resolves")
 	}
 	return nil
-}
-
-// deprecatedInUse finds references to keys marked deprecated.
-func deprecatedInUse(cfg *config.Config, set *message.Set, refs *scan.Result) []scan.Reference {
-	var out []scan.Reference
-
-	for _, key := range set.Keys() {
-		m, ok := set.Get(cfg.DefaultLocale, key)
-		if !ok || !m.Deprecated {
-			continue
-		}
-		out = append(out, refs.Refs[key]...)
-	}
-	return out
 }
 
 // references scans for key usages, mapping generated Go names back to keys.

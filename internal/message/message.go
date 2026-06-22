@@ -134,7 +134,6 @@ type Message struct {
 	Description  string
 	Placeholders map[string]Placeholder
 	Targets      []Target // empty means inherit from the namespace
-	Deprecated   bool
 	Sharing      Sharing
 	Source       Source
 	// Root is the index of the source root this came from.

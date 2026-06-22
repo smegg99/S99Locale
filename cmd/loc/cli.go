@@ -128,7 +128,7 @@ func lintCmd(configPath *string) *cobra.Command {
 		},
 		&cobra.Command{
 			Use:   "keys",
-			Short: "Unused, missing and deprecated keys, from a source scan",
+			Short: "Unused and missing keys, from a source scan",
 			Args:  cobra.NoArgs,
 			RunE: func(cmd *cobra.Command, _ []string) error {
 				return cmdLintKeys(cmd.Context(), *configPath, asJSON)
