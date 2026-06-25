@@ -68,14 +68,6 @@ func buildMessage(node map[string]any, key, path, locale, file string, lines lin
 		m.Targets = targets
 	}
 
-	if raw, ok := node["sharing"]; ok {
-		sharing, err := buildSharing(raw)
-		if err != nil {
-			return nil, fail(CodeSchema, err.Error())
-		}
-		m.Sharing = sharing
-	}
-
 	return m, nil
 }
 
@@ -155,28 +147,4 @@ func buildTargets(raw any) ([]message.Target, error) {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
 	return out, nil
-}
-
-func buildSharing(raw any) (message.Sharing, error) {
-	node, ok := raw.(map[string]any)
-	if !ok {
-		return message.Sharing{}, fmt.Errorf("`sharing` must be a mapping")
-	}
-
-	var s message.Sharing
-	if v, ok := node["isolate"]; ok {
-		flag, ok := v.(bool)
-		if !ok {
-			return s, fmt.Errorf("`sharing.isolate` must be a boolean")
-		}
-		s.Isolate = flag
-	}
-	if v, ok := node["reason"]; ok {
-		text, ok := v.(string)
-		if !ok {
-			return s, fmt.Errorf("`sharing.reason` must be a string")
-		}
-		s.Reason = text
-	}
-	return s, nil
 }

@@ -38,7 +38,6 @@ type Candidate struct {
 // fingerprint, because a collision would merge two unrelated strings.
 func Detect(cfg *config.Config, set *message.Set) []Candidate {
 	prints := map[string]Fingerprint{}
-	isolated := map[string]bool{}
 
 	var keys []string
 	for _, key := range set.Keys() {
@@ -48,15 +47,11 @@ func Detect(cfg *config.Config, set *message.Set) []Candidate {
 		}
 		prints[key] = fp
 		keys = append(keys, key)
-
-		if m, ok := set.Get(cfg.DefaultLocale, key); ok && m.Sharing.Isolate {
-			isolated[key] = true
-		}
 	}
 
 	var out []Candidate
-	out = append(out, exactGroups(cfg, set, keys, prints, isolated)...)
-	out = append(out, textGroups(cfg, keys, prints, isolated, out)...)
+	out = append(out, exactGroups(cfg, set, keys, prints)...)
+	out = append(out, textGroups(cfg, keys, prints, out)...)
 
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Confidence != out[j].Confidence {
@@ -80,14 +75,10 @@ func rank(c Confidence) int {
 
 // exactGroups collects keys whose full contract matches in every locale.
 func exactGroups(cfg *config.Config, set *message.Set, keys []string,
-	prints map[string]Fingerprint, isolated map[string]bool) []Candidate {
+	prints map[string]Fingerprint) []Candidate {
 
 	buckets := map[string][]string{}
 	for _, key := range keys {
-		// An intentional duplicate is not a finding.
-		if isolated[key] {
-			continue
-		}
 		h := prints[key].Hash()
 		buckets[h] = append(buckets[h], key)
 	}
@@ -185,7 +176,7 @@ func sameTargets(cfg *config.Config, a, b *message.Message) bool {
 //   - matches in the default locale only, which says almost nothing: "Open"
 //     the verb and "Open" the state are one word in English alone
 func textGroups(cfg *config.Config, keys []string, prints map[string]Fingerprint,
-	isolated map[string]bool, already []Candidate) []Candidate {
+	already []Candidate) []Candidate {
 
 	if len(cfg.Locales) < 2 {
 		return nil
@@ -200,7 +191,7 @@ func textGroups(cfg *config.Config, keys []string, prints map[string]Fingerprint
 
 	buckets := map[string][]string{}
 	for _, key := range keys {
-		if isolated[key] || reported[key] {
+		if reported[key] {
 			continue
 		}
 		text := prints[key].Translations[cfg.DefaultLocale]

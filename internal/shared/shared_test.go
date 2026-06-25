@@ -203,27 +203,3 @@ func TestDifferentDescriptionsDowngradeToMedium(t *testing.T) {
 		t.Fatal("a downgrade with no reason is not actionable")
 	}
 }
-
-// The documented escape hatch: this wording is meant to diverge later.
-func TestIsolateSuppressesTheFinding(t *testing.T) {
-	got := detect(t, map[string]string{
-		"en/menu.yaml": "accept:\n  value: \"OK\"\n",
-		"pl/menu.yaml": "accept:\n  value: \"OK\"\n",
-		"en/dialog.yaml": `
-accept:
-  value: "OK"
-  sharing:
-    isolate: true
-    reason: "may diverge in other languages"
-`,
-		"pl/dialog.yaml": `
-accept:
-  value: "OK"
-  sharing:
-    isolate: true
-    reason: "may diverge in other languages"
-`,
-	})
-
-	absent(t, got, "dialog.accept", "menu.accept")
-}

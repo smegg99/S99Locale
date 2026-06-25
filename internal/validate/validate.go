@@ -13,7 +13,7 @@ import (
 )
 
 // Run checks a parsed set against the config.
-func Run(cfg *config.Config, res *parse.Result, strict bool) *Report {
+func Run(cfg *config.Config, res *parse.Result) *Report {
 	r := &Report{}
 
 	for _, e := range res.Errors {
@@ -33,13 +33,13 @@ func Run(cfg *config.Config, res *parse.Result, strict bool) *Report {
 
 	base := cfg.DefaultLocale
 	for _, key := range res.Set.Keys() {
-		checkKey(r, cfg, res.Set, key, base, strict)
+		checkKey(r, cfg, res.Set, key, base)
 	}
 	r.Sort()
 	return r
 }
 
-func checkKey(r *Report, cfg *config.Config, set *message.Set, key, base string, strict bool) {
+func checkKey(r *Report, cfg *config.Config, set *message.Set, key, base string) {
 	ref, hasRef := set.Get(base, key)
 
 	for _, locale := range cfg.Locales {
@@ -53,7 +53,7 @@ func checkKey(r *Report, cfg *config.Config, set *message.Set, key, base string,
 				"missing from %s; it exists in %s", locale, base)
 			continue
 		}
-		checkOne(r, cfg, m, strict)
+		checkOne(r, cfg, m)
 
 		if hasRef && locale != base {
 			compare(r, ref, m, base)
@@ -62,7 +62,7 @@ func checkKey(r *Report, cfg *config.Config, set *message.Set, key, base string,
 }
 
 // checkOne is everything decidable from a single message.
-func checkOne(r *Report, cfg *config.Config, m *message.Message, strict bool) {
+func checkOne(r *Report, cfg *config.Config, m *message.Message) {
 	rule, err := plural.For(m.Locale)
 	if err != nil {
 		r.errorf(CodePluralMissing, m.Key, m.Locale, m.Source, "%s", err.Error())
@@ -81,11 +81,6 @@ func checkOne(r *Report, cfg *config.Config, m *message.Message, strict bool) {
 	}
 	checkPlaceholders(r, m)
 	checkTargets(r, cfg, m)
-
-	if m.Sharing.Isolate && m.Sharing.Reason == "" && strict {
-		r.errorf(CodeIsolateNoReason, m.Key, m.Locale, m.Source,
-			"sharing.isolate needs a reason under --strict")
-	}
 }
 
 func checkPlural(r *Report, m *message.Message, rule plural.Rule) {

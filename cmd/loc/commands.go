@@ -35,7 +35,7 @@ func load(ctx context.Context, path string, strict bool) (*config.Config, *messa
 		return nil, nil, nil, err
 	}
 
-	report := validate.Run(cfg, res, strict)
+	report := validate.Run(cfg, res)
 	if report.HasErrors() || (strict && len(report.Warnings()) > 0) {
 		return cfg, res.Set, report, errFailed
 	}

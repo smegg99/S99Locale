@@ -17,7 +17,7 @@ import (
 
 // project writes a config plus locale files and runs parse and validate.
 // files is locale-relative: "en/common.yaml" -> contents.
-func project(t *testing.T, files map[string]string, strict bool) *validate.Report {
+func project(t *testing.T, files map[string]string) *validate.Report {
 	t.Helper()
 	dir := t.TempDir()
 
@@ -50,7 +50,7 @@ roots: ["locales"]
 	if err != nil {
 		t.Fatal(err)
 	}
-	return validate.Run(cfg, res, strict)
+	return validate.Run(cfg, res)
 }
 
 func codes(r *validate.Report) []string {
@@ -94,7 +94,7 @@ func TestCleanProjectHasNoErrors(t *testing.T) {
 	r := project(t, map[string]string{
 		"en/common.yaml": okEn,
 		"pl/common.yaml": okPl,
-	}, false)
+	})
 
 	if r.HasErrors() {
 		t.Fatalf("errors on a clean project: %v", codes(r))
@@ -105,7 +105,7 @@ func TestMissingTranslationIsAnError(t *testing.T) {
 	r := project(t, map[string]string{
 		"en/common.yaml": okEn,
 		"pl/common.yaml": "",
-	}, false)
+	})
 
 	d := find(t, r, validate.CodeMissingKey)
 	if d.Locale != "pl" || d.Key != "common.greeting" {
@@ -121,7 +121,7 @@ greeting:
   value: "Cześć {imie}"
   placeholders:
     imie: {type: string}
-`}, false)
+`})
 
 	d := find(t, r, validate.CodePlaceholder)
 	// The diagnostic shows both sides.
@@ -138,7 +138,7 @@ func TestPlaceholderTypeMismatch(t *testing.T) {
 	r := project(t, map[string]string{
 		"en/a.yaml": "x:\n  value: \"{n}\"\n  placeholders:\n    n: {type: integer}\n",
 		"pl/a.yaml": "x:\n  value: \"{n}\"\n  placeholders:\n    n: {type: string}\n",
-	}, false)
+	})
 
 	if !has(r, validate.CodeTypeMismatch) {
 		t.Fatalf("codes = %v", codes(r))
@@ -149,7 +149,7 @@ func TestUndeclaredPlaceholderIsAnError(t *testing.T) {
 	r := project(t, map[string]string{
 		"en/a.yaml": "x:\n  value: \"Hello {name}\"\n",
 		"pl/a.yaml": "x:\n  value: \"Cześć {name}\"\n",
-	}, false)
+	})
 
 	if !has(r, validate.CodeUndeclared) {
 		t.Fatalf("codes = %v", codes(r))
@@ -160,7 +160,7 @@ func TestDeclaredButUnusedIsAWarning(t *testing.T) {
 	r := project(t, map[string]string{
 		"en/a.yaml": "x:\n  value: \"Hello\"\n  placeholders:\n    name: {type: string}\n",
 		"pl/a.yaml": "x:\n  value: \"Cześć\"\n  placeholders:\n    name: {type: string}\n",
-	}, false)
+	})
 
 	if r.HasErrors() {
 		t.Fatalf("an unused placeholder must not fail the build: %v", codes(r))
@@ -174,7 +174,7 @@ func TestEmptyTranslationIsAnError(t *testing.T) {
 	r := project(t, map[string]string{
 		"en/a.yaml": "x:\n  value: \"Hello\"\n",
 		"pl/a.yaml": "x:\n  value: \"   \"\n",
-	}, false)
+	})
 
 	if !has(r, validate.CodeEmpty) {
 		t.Fatalf("codes = %v", codes(r))
@@ -191,7 +191,7 @@ x:
     forms: {one: "a", few: "b", many: "c", other: "d"}
   placeholders:
     count: {type: integer}
-`}, false)
+`})
 
 	if !has(r, validate.CodeKindMismatch) {
 		t.Fatalf("codes = %v", codes(r))
@@ -207,7 +207,7 @@ greeting:
   value: "Hi"
   targets: [desktop]
 `
-	r := project(t, map[string]string{"en/a.yaml": body, "pl/a.yaml": body}, false)
+	r := project(t, map[string]string{"en/a.yaml": body, "pl/a.yaml": body})
 
 	d := find(t, r, validate.CodeTarget)
 	if !strings.Contains(d.Detail, "reaches nothing") {
@@ -221,7 +221,7 @@ greeting:
   value: "Hi"
   targets: [web]
 `
-	r := project(t, map[string]string{"en/a.yaml": body, "pl/a.yaml": body}, false)
+	r := project(t, map[string]string{"en/a.yaml": body, "pl/a.yaml": body})
 
 	if has(r, validate.CodeTarget) {
 		t.Fatalf("a configured target was rejected: %v", codes(r))

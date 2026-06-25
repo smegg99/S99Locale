@@ -28,7 +28,7 @@ files:
     forms: {one: "{count} plik", other: "{count} plików"}
   placeholders:
     count: {type: integer}
-`}, false)
+`})
 
 	d := find(t, r, validate.CodePluralMissing)
 	if d.Locale != "pl" {
@@ -63,7 +63,7 @@ files:
     forms: {one: "a", few: "b", many: "c", other: "d"}
   placeholders:
     count: {type: integer}
-`}, false)
+`})
 
 	d := find(t, r, validate.CodePluralExtra)
 	if d.Locale != "en" {
@@ -88,7 +88,7 @@ files:
     forms: {one: "{n} a", few: "{n} b", many: "{n} c", other: "{n} d"}
   placeholders:
     n: {type: integer}
-`}, false)
+`})
 
 	if !has(r, validate.CodePluralArgument) {
 		t.Fatalf("codes = %v", codes(r))
@@ -118,7 +118,7 @@ reeds:
       other: "{count} głosów"
   placeholders:
     count: {type: integer}
-`}, false)
+`})
 
 	if r.HasErrors() {
 		t.Fatalf("a valid zero band was rejected: %v", r.Diagnostics)
@@ -130,7 +130,7 @@ func TestGoFieldCollision(t *testing.T) {
 	body := "x:\n  value: \"{user_id} {userId}\"\n" +
 		"  placeholders:\n    user_id: {type: string}\n    userId: {type: string}\n"
 
-	r := project(t, map[string]string{"en/a.yaml": body, "pl/a.yaml": body}, false)
+	r := project(t, map[string]string{"en/a.yaml": body, "pl/a.yaml": body})
 
 	d := find(t, r, validate.CodeGoCollision)
 	if !strings.Contains(d.Detail, "UserId") {
@@ -151,28 +151,14 @@ func TestCasingAloneIsNotACollision(t *testing.T) {
 	}
 }
 
-func TestIsolateNeedsAReasonOnlyUnderStrict(t *testing.T) {
-	files := map[string]string{
-		"en/a.yaml": "x:\n  value: \"OK\"\n  sharing:\n    isolate: true\n",
-		"pl/a.yaml": "x:\n  value: \"OK\"\n  sharing:\n    isolate: true\n",
-	}
-
-	if r := project(t, files, false); has(r, validate.CodeIsolateNoReason) {
-		t.Fatal("reason was demanded outside strict mode")
-	}
-	if r := project(t, files, true); !has(r, validate.CodeIsolateNoReason) {
-		t.Fatal("strict mode did not demand a reason")
-	}
-}
-
 func TestDiagnosticsAreSortedDeterministically(t *testing.T) {
 	files := map[string]string{
 		"en/a.yaml": "b:\n  value: \"x\"\na:\n  value: \"y\"\n",
 		"pl/a.yaml": "",
 	}
 
-	first := codes(project(t, files, false))
-	second := codes(project(t, files, false))
+	first := codes(project(t, files))
+	second := codes(project(t, files))
 	if !slices.Equal(first, second) {
 		t.Fatalf("two runs disagreed:\n%v\n%v", first, second)
 	}
@@ -191,7 +177,7 @@ files:
   placeholders:
     count: {type: string}
 `
-	r := project(t, map[string]string{"en/a.yaml": body, "pl/a.yaml": body}, false)
+	r := project(t, map[string]string{"en/a.yaml": body, "pl/a.yaml": body})
 
 	d := find(t, r, validate.CodePluralArgType)
 	if !strings.Contains(d.Detail, "must be an integer") {
@@ -208,7 +194,7 @@ files:
   placeholders:
     count: {type: integer}
 `
-	r := project(t, map[string]string{"en/a.yaml": body, "pl/a.yaml": body}, false)
+	r := project(t, map[string]string{"en/a.yaml": body, "pl/a.yaml": body})
 
 	if has(r, validate.CodePluralArgType) {
 		t.Fatalf("an integer argument was rejected: %v", codes(r))
@@ -234,7 +220,7 @@ files:
     forms: {one: "{count} plik", few: "{count} pliki", many: "{count} plikow", other: "{count} plikow"}
   placeholders:
     count: {type: integer}
-`}, false)
+`})
 
 	d := find(t, r, validate.CodeZeroMismatch)
 	if d.Locale != "pl" {
@@ -260,7 +246,7 @@ files:
     forms: {one: "{count} plik", few: "{count} pliki", many: "{count} plikow", other: "{count} plikow"}
   placeholders:
     count: {type: integer}
-`}, false)
+`})
 
 	if has(r, validate.CodeZeroMismatch) {
 		t.Fatalf("English having fewer categories was reported: %v", codes(r))

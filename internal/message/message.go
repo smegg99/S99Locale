@@ -101,11 +101,6 @@ func (p *Plural) Categories() []Category {
 	return out
 }
 
-type Sharing struct {
-	Isolate bool
-	Reason  string
-}
-
 type Source struct {
 	File string `json:"file"`
 	Line int    `json:"line,omitempty"`
@@ -134,7 +129,6 @@ type Message struct {
 	Description  string
 	Placeholders map[string]Placeholder
 	Targets      []Target // empty means inherit from the namespace
-	Sharing      Sharing
 	Source       Source
 	// Root is the index of the source root this came from.
 	Root int

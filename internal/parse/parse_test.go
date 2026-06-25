@@ -102,9 +102,6 @@ loginFailed:
   targets: [web, backend]
   placeholders:
     email: {type: string}
-  sharing:
-    isolate: true
-    reason: "wording diverges"
 `})
 	noErrors(t, res)
 
@@ -120,9 +117,6 @@ loginFailed:
 	}
 	if m.Placeholders["email"].Type != message.TypeString {
 		t.Fatalf("placeholder = %+v", m.Placeholders)
-	}
-	if !m.Sharing.Isolate || m.Sharing.Reason == "" {
-		t.Fatalf("sharing = %+v", m.Sharing)
 	}
 }
 

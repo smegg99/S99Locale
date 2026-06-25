@@ -28,25 +28,24 @@ const (
 // 001, 002, 004 and 006 are raised during parsing and forwarded by Run; they
 // are declared in parse so there is one definition of each.
 const (
-	CodeYAML            = parse.CodeYAML
-	CodeSchema          = parse.CodeSchema
-	CodePlaceholder     = "I18N003" // placeholder mismatch across locales
-	CodeDuplicate       = parse.CodeDuplicate
-	CodeMissingKey      = "I18N005" // key absent from a locale
-	CodeTarget          = parse.CodeTarget
-	CodeEmpty           = "I18N007" // empty translation
-	CodeKindMismatch    = "I18N008" // plain in one locale, plural in another
-	CodePluralMissing   = "I18N009" // required category absent
-	CodePluralExtra     = "I18N010" // category the locale does not have
-	CodePluralArgument  = "I18N011" // argument differs across locales
-	CodeUndeclared      = "I18N012" // placeholder used but not declared
-	CodeUnused          = "I18N013" // placeholder declared but not used
-	CodeTypeMismatch    = "I18N014" // placeholder type differs across locales
-	CodeGoCollision     = "I18N015" // two placeholders collide once PascalCased
-	CodeOverride        = "I18N016" // a later root shadowed an earlier one
-	CodeIsolateNoReason = "I18N017" // sharing.isolate without a reason
-	CodePluralArgType   = "I18N018" // plural argument is not an integer
-	CodeZeroMismatch    = "I18N019" // the zero band is declared in some locales
+	CodeYAML           = parse.CodeYAML
+	CodeSchema         = parse.CodeSchema
+	CodePlaceholder    = "I18N003" // placeholder mismatch across locales
+	CodeDuplicate      = parse.CodeDuplicate
+	CodeMissingKey     = "I18N005" // key absent from a locale
+	CodeTarget         = parse.CodeTarget
+	CodeEmpty          = "I18N007" // empty translation
+	CodeKindMismatch   = "I18N008" // plain in one locale, plural in another
+	CodePluralMissing  = "I18N009" // required category absent
+	CodePluralExtra    = "I18N010" // category the locale does not have
+	CodePluralArgument = "I18N011" // argument differs across locales
+	CodeUndeclared     = "I18N012" // placeholder used but not declared
+	CodeUnused         = "I18N013" // placeholder declared but not used
+	CodeTypeMismatch   = "I18N014" // placeholder type differs across locales
+	CodeGoCollision    = "I18N015" // two placeholders collide once PascalCased
+	CodeOverride       = "I18N016" // a later root shadowed an earlier one
+	CodePluralArgType  = "I18N018" // plural argument is not an integer
+	CodeZeroMismatch   = "I18N019" // the zero band is declared in some locales
 )
 
 type Diagnostic struct {
