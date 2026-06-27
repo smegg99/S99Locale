@@ -4,7 +4,6 @@ package parse
 
 import (
 	"fmt"
-	"sort"
 
 	"github.com/smegg99/s99locale/internal/message"
 )
@@ -58,14 +57,6 @@ func buildMessage(node map[string]any, key, path, locale, file string, lines lin
 			return nil, fail(CodeSchema, err.Error())
 		}
 		m.Placeholders = ph
-	}
-
-	if raw, ok := node["targets"]; ok {
-		targets, err := buildTargets(raw)
-		if err != nil {
-			return nil, fail(CodeTarget, err.Error())
-		}
-		m.Targets = targets
 	}
 
 	return m, nil
@@ -124,27 +115,5 @@ func buildPlaceholders(raw any) (map[string]message.Placeholder, error) {
 		}
 		out[name] = message.Placeholder{Name: name, Type: kind}
 	}
-	return out, nil
-}
-
-func buildTargets(raw any) ([]message.Target, error) {
-	list, ok := raw.([]any)
-	if !ok {
-		return nil, fmt.Errorf("`targets` must be a list")
-	}
-
-	var out []message.Target
-	for _, item := range list {
-		text, ok := item.(string)
-		if !ok {
-			return nil, fmt.Errorf("`targets` entries must be strings")
-		}
-		t, err := message.ParseTarget(text)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, t)
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
 	return out, nil
 }

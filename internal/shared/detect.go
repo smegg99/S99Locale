@@ -146,12 +146,6 @@ func grade(cfg *config.Config, set *message.Set, group []string) (Confidence, st
 
 func sameTargets(cfg *config.Config, a, b *message.Message) bool {
 	left, right := cfg.TargetsFor(a.Namespace), cfg.TargetsFor(b.Namespace)
-	if len(a.Targets) > 0 {
-		left = a.Targets
-	}
-	if len(b.Targets) > 0 {
-		right = b.Targets
-	}
 	if len(left) != len(right) {
 		return false
 	}

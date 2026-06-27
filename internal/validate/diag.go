@@ -25,7 +25,7 @@ const (
 
 // Codes. Stable, because they end up in suppression comments and CI output.
 //
-// 001, 002, 004 and 006 are raised during parsing and forwarded by Run; they
+// 001, 002 and 004 are raised during parsing and forwarded by Run; they
 // are declared in parse so there is one definition of each.
 const (
 	CodeYAML           = parse.CodeYAML
@@ -33,7 +33,6 @@ const (
 	CodePlaceholder    = "I18N003" // placeholder mismatch across locales
 	CodeDuplicate      = parse.CodeDuplicate
 	CodeMissingKey     = "I18N005" // key absent from a locale
-	CodeTarget         = parse.CodeTarget
 	CodeEmpty          = "I18N007" // empty translation
 	CodeKindMismatch   = "I18N008" // plain in one locale, plural in another
 	CodePluralMissing  = "I18N009" // required category absent

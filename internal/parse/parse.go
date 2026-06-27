@@ -40,7 +40,6 @@ const (
 	CodeYAML      = "I18N001" // invalid structure
 	CodeSchema    = "I18N002" // message does not fit the schema
 	CodeDuplicate = "I18N004" // duplicate fully qualified key
-	CodeTarget    = "I18N006" // unknown or wrong target
 )
 
 type Error struct {

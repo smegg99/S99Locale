@@ -130,24 +130,6 @@ func TestNamespaceFiltering(t *testing.T) {
 	}
 }
 
-func TestPerMessageTargetsOverrideTheNamespace(t *testing.T) {
-	cfg := load(t, valid)
-
-	// common is web-only, but this message declares backend.
-	m := &message.Message{Namespace: "common", Targets: []message.Target{message.TargetBackend}}
-	if !cfg.Wants(m, message.TargetBackend) {
-		t.Fatal("the per-message override was ignored")
-	}
-	if cfg.Wants(m, message.TargetWeb) {
-		t.Fatal("the override should replace the namespace, not add to it")
-	}
-
-	plain := &message.Message{Namespace: "common"}
-	if !cfg.Wants(plain, message.TargetWeb) || cfg.Wants(plain, message.TargetBackend) {
-		t.Fatal("a message with no override should follow its namespace")
-	}
-}
-
 // loc must run from anywhere, so relative paths resolve against the config.
 func TestRelativePathsResolveAgainstTheConfig(t *testing.T) {
 	path := write(t, valid)

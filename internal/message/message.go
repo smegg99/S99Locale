@@ -24,17 +24,6 @@ const (
 	TargetDesktop Target = "desktop"
 )
 
-var AllTargets = []Target{TargetBackend, TargetWeb, TargetDesktop}
-
-func ParseTarget(s string) (Target, error) {
-	for _, t := range AllTargets {
-		if Target(s) == t {
-			return t, nil
-		}
-	}
-	return "", fmt.Errorf("unknown target %q", s)
-}
-
 type PlaceholderType string
 
 const (
@@ -128,7 +117,6 @@ type Message struct {
 	Plural       *Plural
 	Description  string
 	Placeholders map[string]Placeholder
-	Targets      []Target // empty means inherit from the namespace
 	Source       Source
 	// Root is the index of the source root this came from.
 	Root int

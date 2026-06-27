@@ -52,26 +52,17 @@ both:
 	}
 }
 
-func TestUnknownCategoryAndTargetAreRejected(t *testing.T) {
+func TestUnknownCategoryIsRejected(t *testing.T) {
 	res := parseOne(t, map[string]string{
 		"en/a.yaml": `
 bad:
   plural:
     argument: count
     forms: {several: "x"}
-`,
-		"en/b.yaml": `
-worse:
-  value: "x"
-  targets: [mobile]
 `})
 
-	var codes []string
-	for _, e := range res.Errors {
-		codes = append(codes, e.Code)
-	}
-	if len(codes) != 2 {
-		t.Fatalf("errors = %v, want two", res.Errors)
+	if len(res.Errors) != 1 {
+		t.Fatalf("errors = %v, want one", res.Errors)
 	}
 }
 

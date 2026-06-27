@@ -3,7 +3,6 @@
 package validate
 
 import (
-	"slices"
 	"strings"
 
 	"github.com/smegg99/s99locale/internal/config"
@@ -80,7 +79,6 @@ func checkOne(r *Report, cfg *config.Config, m *message.Message) {
 		checkPlural(r, m, rule)
 	}
 	checkPlaceholders(r, m)
-	checkTargets(r, cfg, m)
 }
 
 func checkPlural(r *Report, m *message.Message, rule plural.Rule) {
@@ -109,19 +107,6 @@ func checkPlural(r *Report, m *message.Message, rule plural.Rule) {
 		r.errorf(CodePluralArgType, m.Key, m.Locale, m.Source,
 			"plural argument %q is declared as %s; it counts, so it must be an integer",
 			p.Name, p.Type)
-	}
-}
-
-// checkTargets reports a message aimed at a target this build does not produce.
-// Nothing else would: it is translated everywhere and reaches nothing.
-func checkTargets(r *Report, cfg *config.Config, m *message.Message) {
-	for _, t := range m.Targets {
-		if slices.Contains(cfg.Targets, t) {
-			continue
-		}
-		r.errorf(CodeTarget, m.Key, m.Locale, m.Source,
-			"targets %q, which is not in the configured targets %v; this message reaches nothing",
-			t, cfg.Targets)
 	}
 }
 

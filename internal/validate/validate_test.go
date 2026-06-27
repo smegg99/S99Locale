@@ -197,33 +197,3 @@ x:
 		t.Fatalf("codes = %v", codes(r))
 	}
 }
-
-// A message aimed at a target the build does not produce is translated in every
-// locale and reaches nothing. Namespace targets were checked at config load;
-// per-message ones were not.
-func TestPerMessageTargetMustBeConfigured(t *testing.T) {
-	body := `
-greeting:
-  value: "Hi"
-  targets: [desktop]
-`
-	r := project(t, map[string]string{"en/a.yaml": body, "pl/a.yaml": body})
-
-	d := find(t, r, validate.CodeTarget)
-	if !strings.Contains(d.Detail, "reaches nothing") {
-		t.Fatalf("detail = %q", d.Detail)
-	}
-}
-
-func TestAConfiguredPerMessageTargetIsFine(t *testing.T) {
-	body := `
-greeting:
-  value: "Hi"
-  targets: [web]
-`
-	r := project(t, map[string]string{"en/a.yaml": body, "pl/a.yaml": body})
-
-	if has(r, validate.CodeTarget) {
-		t.Fatalf("a configured target was rejected: %v", codes(r))
-	}
-}

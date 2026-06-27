@@ -171,11 +171,7 @@ func (c *Config) TargetsFor(namespace string) []message.Target {
 	return out
 }
 
-// Wants reports whether a message reaches a target. A per-message targets list
-// overrides its namespace.
+// Wants reports whether a message reaches a target.
 func (c *Config) Wants(m *message.Message, target message.Target) bool {
-	if len(m.Targets) > 0 {
-		return slices.Contains(m.Targets, target)
-	}
 	return slices.Contains(c.TargetsFor(m.Namespace), target)
 }
