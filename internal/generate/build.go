@@ -57,7 +57,7 @@ func Build(ctx context.Context, cfg *config.Config, set *message.Set) (*Outputs,
 			if err := GoCode(goOut, cfg, set); err != nil {
 				return nil, err
 			}
-		case message.TargetWeb, message.TargetDesktop:
+		case message.TargetWeb:
 			if err := Vue(out, cfg, set, target); err != nil {
 				return nil, err
 			}

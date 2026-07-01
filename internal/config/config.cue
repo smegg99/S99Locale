@@ -42,7 +42,7 @@ package config
 	go: #Go @go(Go)
 }
 
-#Target: "backend" | "web" | "desktop"
+#Target: "backend" | "web"
 
 #Namespace: {
 	targets: [...#Target]

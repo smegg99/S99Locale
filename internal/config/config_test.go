@@ -96,8 +96,8 @@ func TestDuplicateLocaleIsRejected(t *testing.T) {
 }
 
 func TestNamespaceCannotTargetSomethingNotBuilt(t *testing.T) {
-	body := strings.Replace(valid, `common: {targets: ["web"]}`, `common: {targets: ["desktop"]}`, 1)
-	if got := loadErr(t, body); !strings.Contains(got, "desktop") {
+	body := strings.Replace(valid, `targets: ["web", "backend"]`, `targets: ["web"]`, 1)
+	if got := loadErr(t, body); !strings.Contains(got, "backend") {
 		t.Fatalf("error = %s", got)
 	}
 }

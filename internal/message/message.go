@@ -21,7 +21,6 @@ type Target string
 const (
 	TargetBackend Target = "backend"
 	TargetWeb     Target = "web"
-	TargetDesktop Target = "desktop"
 )
 
 type PlaceholderType string
