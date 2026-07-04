@@ -38,7 +38,6 @@ package config
 	// Go accessors. A wrapper around any of those is invisible without this.
 	keyPatterns: [...string]
 
-	web: #Web
 	go: #Go @go(Go)
 }
 
@@ -46,13 +45,6 @@ package config
 
 #Namespace: {
 	targets: [...#Target]
-}
-
-#Web: {
-	// Written next to the generated locales. The band order in the generated
-	// strings is meaningless without it.
-	pluralsFile: string | *"plurals.gen.ts"
-	keysFile:    string | *"keys.gen.ts"
 }
 
 #Go: {

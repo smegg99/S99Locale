@@ -28,11 +28,6 @@ type Namespace struct {
 	Targets []message.Target `json:"targets"`
 }
 
-type Web struct {
-	PluralsFile string `json:"pluralsFile"`
-	KeysFile    string `json:"keysFile"`
-}
-
 type Go struct {
 	Package string `json:"package"`
 	Output  string `json:"output"`
@@ -48,7 +43,6 @@ type Config struct {
 	DynamicKeys   []string             `json:"dynamicKeys"`
 	Scan          []string             `json:"scan"`
 	KeyPatterns   []string             `json:"keyPatterns"`
-	Web           Web                  `json:"web"`
 	Go            Go                   `json:"go"`
 
 	// Dir is the config's directory; every relative path resolves against it.

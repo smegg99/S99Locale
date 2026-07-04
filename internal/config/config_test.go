@@ -58,9 +58,6 @@ func TestDefaultsApply(t *testing.T) {
 	if cfg.Output != "generated" {
 		t.Fatalf("output = %q", cfg.Output)
 	}
-	if cfg.Web.PluralsFile != "plurals.gen.ts" || cfg.Web.KeysFile != "keys.gen.ts" {
-		t.Fatalf("web = %+v", cfg.Web)
-	}
 	if cfg.Go.Package != "messages" {
 		t.Fatalf("go package = %q", cfg.Go.Package)
 	}
