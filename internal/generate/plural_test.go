@@ -108,18 +108,6 @@ func TestGeneratedPluralsFileCoversEveryLocale(t *testing.T) {
 	}
 }
 
-func TestTypedKeysListOnlyTheTargetsMessages(t *testing.T) {
-	_, out := project(t, fixture)
-	src := string(file(t, out, "web/keys.gen.ts"))
-
-	if !strings.Contains(src, "'common.cancel'") {
-		t.Fatal("a web key is missing from the union")
-	}
-	if strings.Contains(src, "'emails.welcome'") {
-		t.Fatal("a backend-only key leaked into the web key union")
-	}
-}
-
 func TestGoCodeIsTypedAndBranchesOnZero(t *testing.T) {
 	out := pluralProject(t)
 	src := string(file(t, out, "go/messages_gen.go"))

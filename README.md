@@ -137,7 +137,7 @@ generated/
 ├── backend/{en,pl}.json      flat, {{.Name}}, go-i18n
 ├── web/{en,pl}/*.json        nested, {name}, one file per namespace
 ├── web/plurals.gen.ts        the index function
-├── web/keys.gen.ts           typed key union
+├── web/keys.gen.ts           the locale list
 ├── go/{messages,keys}_gen.go typed accessors
 └── manifest.json
 ```

@@ -4,7 +4,6 @@ package generate
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/smegg99/s99locale/internal/config"
@@ -118,35 +117,12 @@ func quotedCategories(rule plural.Rule) string {
 	return strings.Join(names, ", ")
 }
 
-// Keys writes the typed key union.
-//
-// A union rather than typed functions: vue-i18n's own t() already takes a key,
-// so this checks every call site without a second API alongside it.
-func Keys(out *Output, cfg *config.Config, set *message.Set, target message.Target) error {
-	var used []string
-
-	for _, key := range set.Keys() {
-		m, ok := set.Get(cfg.DefaultLocale, key)
-		if !ok || !cfg.Wants(m, target) {
-			continue
-		}
-		used = append(used, key)
-	}
-	sort.Strings(used)
-
+// Keys writes the locale list and the default locale a frontend imports.
+func Keys(out *Output, cfg *config.Config, target message.Target) error {
 	var b strings.Builder
 	b.WriteString(tsHeader)
 
-	if len(used) == 0 {
-		b.WriteString("export type I18nKey = never\n")
-	} else {
-		b.WriteString("export type I18nKey =\n")
-		for _, key := range used {
-			fmt.Fprintf(&b, "  | '%s'\n", key)
-		}
-	}
-
-	fmt.Fprintf(&b, "\nexport const locales = %s as const\n", jsonArray(cfg.Locales))
+	fmt.Fprintf(&b, "export const locales = %s as const\n", jsonArray(cfg.Locales))
 	fmt.Fprintf(&b, "export const defaultLocale = '%s'\n", cfg.DefaultLocale)
 
 	out.Add(fmt.Sprintf("%s/%s", target, keysFileName), []byte(b.String()))

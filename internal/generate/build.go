@@ -64,7 +64,7 @@ func Build(ctx context.Context, cfg *config.Config, set *message.Set) (*Outputs,
 			if err := Plurals(out, cfg, target); err != nil {
 				return nil, err
 			}
-			if err := Keys(out, cfg, set, target); err != nil {
+			if err := Keys(out, cfg, target); err != nil {
 				return nil, err
 			}
 		default:
