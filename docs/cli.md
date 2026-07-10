@@ -7,7 +7,6 @@ loc stats      counts by namespace, target and locale, plus bundle sizes
 loc lint       report messages that may be duplicates
 loc watch      rebuild on every change until interrupted
 loc refactor-shared   plan a rename, as a patch
-loc import     read existing locale trees into canonical YAML
 loc clean      remove generated artefacts
 ```
 
@@ -159,35 +158,3 @@ check-locales:
 Building first and then checking is what proves the build is deterministic: if
 `build` were not, `check` would find its own output stale. Commit `generated/`
 instead and `check` alone is enough.
-
-## import
-
-```
-loc import --from-go <dir> --from-vue <dir> [--force]
-```
-
-| flag | reads |
-|---|---|
-| `--from-go` | flat go-i18n bundles, one per locale: `en.json` |
-| `--from-vue` | nested vue-i18n bundles: `en/common.json` |
-
-Output goes to the **last** configured root, because that is the app's own -
-the earlier roots belong to libraries.
-
-What it infers:
-
-- `{{.Name}}` back to `{name}`
-- pipe strings into plural categories, by band count against the locale's rule
-- five bands where four are required means the first is the opt-in `zero`
-- a standalone `key.zero` folded back into the plural it belongs to
-- the counted argument, when one placeholder spans every band
-- placeholder declarations, the counted one as an integer
-
-What it reports instead of guessing:
-
-- fewer bands than the locale requires - the wording has to be written
-- more than one placeholder in a plural, so the count is ambiguous
-- the two source trees disagreeing about one string
-- descriptions, which no bundle carries
-
-Existing canonical files are skipped unless `--force`.

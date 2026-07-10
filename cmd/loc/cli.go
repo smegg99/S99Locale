@@ -9,7 +9,6 @@ import (
 
 	"github.com/smegg99/s99locale"
 	"github.com/smegg99/s99locale/internal/config"
-	"github.com/smegg99/s99locale/internal/legacy"
 )
 
 // errFailed means a command printed its own diagnostics; exit non-zero without another message.
@@ -54,7 +53,6 @@ func rootCmd() *cobra.Command {
 				return cmdStats(cmd.Context(), configPath)
 			},
 		},
-		importCmd(&configPath),
 		lintCmd(&configPath),
 		&cobra.Command{
 			Use:   "watch",
@@ -143,30 +141,5 @@ func lintCmd(configPath *string) *cobra.Command {
 			},
 		},
 	)
-	return cmd
-}
-
-func importCmd(configPath *string) *cobra.Command {
-	var (
-		src   legacy.Sources
-		force bool
-	)
-
-	cmd := &cobra.Command{
-		Use:   "import",
-		Short: "Read existing locale trees into canonical YAML",
-		Long: "Reads flat go-i18n bundles and nested vue-i18n bundles, writes canonical\n" +
-			"YAML into the last configured root, and reports everything it could not\n" +
-			"work out. Existing files are left alone unless --force.",
-		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			return cmdImport(cmd.Context(), *configPath, src, force)
-		},
-	}
-
-	cmd.Flags().StringVar(&src.Go, "from-go", "", "directory of flat go-i18n bundles (en.json)")
-	cmd.Flags().StringVar(&src.Vue, "from-vue", "", "directory of nested vue-i18n bundles (en/common.json)")
-	cmd.Flags().BoolVar(&force, "force", false, "replace canonical files that already exist")
-
 	return cmd
 }

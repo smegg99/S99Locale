@@ -253,25 +253,6 @@ translation key names.
 - [docs/refactoring.md](docs/refactoring.md) - planning a rename
 - [examples/basic](examples/basic) - en + pl, both targets, end to end
 
-## Importing an existing project
-
-```sh
-loc import --from-go common/i18n/locales --from-vue frontend/i18n/locales
-```
-
-Reads flat go-i18n bundles and nested vue-i18n bundles, writes canonical YAML
-into the last configured root, and reports everything it could not work out -
-ambiguous plural bands, a counted argument it had to guess, the two trees
-disagreeing about one string. Descriptions are never recoverable from a bundle
-and are always worth adding afterwards.
-
-Existing canonical files are left alone unless `--force`, so an import cannot
-silently drop work someone has already done.
-
-`loc build` emits exactly the two formats `loc import` reads, which makes
-build -> import -> build a round trip that has to land on identical bytes. That
-is the importer's real test.
-
 ## Shared messages and pseudolocalisation
 
 ```sh
