@@ -21,11 +21,9 @@ reeds:
 
 func pluralProject(t *testing.T) *generate.Output {
 	t.Helper()
-	en := `      zero: "no reeds"
-      one: "{count} reed"
+	en := `      one: "{count} reed"
       other: "{count} reeds"`
-	pl := `      zero: "brak głosów"
-      one: "{count} głos"
+	pl := `      one: "{count} głos"
       few: "{count} głosy"
       many: "{count} głosów"
       other: "{count} głosów"`
@@ -38,50 +36,22 @@ func pluralProject(t *testing.T) *generate.Output {
 	return out
 }
 
-// Polish gets five bands in the order the generated index function expects.
+// Polish gets four bands in the order the generated index function expects.
 func TestVuePluralBandOrder(t *testing.T) {
 	out := pluralProject(t)
 
 	pl := jsonFile(t, out, "web/pl/tuner.json")
 	got := pl["tuner"].(map[string]any)["reeds"].(string)
 
-	want := "brak głosów | {count} głos | {count} głosy | {count} głosów | {count} głosów"
+	want := "{count} głos | {count} głosy | {count} głosów | {count} głosów"
 	if got != want {
 		t.Fatalf("pipe string =\n  %q\nwant\n  %q", got, want)
 	}
 
 	en := jsonFile(t, out, "web/en/tuner.json")
 	gotEn := en["tuner"].(map[string]any)["reeds"].(string)
-	if gotEn != "no reeds | {count} reed | {count} reeds" {
+	if gotEn != "{count} reed | {count} reeds" {
 		t.Fatalf("en = %q", gotEn)
-	}
-}
-
-// The zero band is written as its own key: no CLDR rule would ever select it
-// from inside the plural.
-func TestGoZeroBandIsASeparateMessage(t *testing.T) {
-	out := pluralProject(t)
-	backend := jsonFile(t, out, "backend/pl.json")
-
-	zero, ok := backend["tuner.reeds.zero"]
-	if !ok {
-		t.Fatalf("no separate zero key; have %v", keysOf(backend))
-	}
-	if zero != "brak głosów" {
-		t.Fatalf("zero = %v", zero)
-	}
-
-	forms, ok := backend["tuner.reeds"].(map[string]any)
-	if !ok {
-		t.Fatalf("plural = %v", backend["tuner.reeds"])
-	}
-	if _, dead := forms["zero"]; dead {
-		t.Fatal("zero was also left inside the plural, where nothing can select it")
-	}
-	for _, c := range []string{"one", "few", "many", "other"} {
-		if _, ok := forms[c]; !ok {
-			t.Fatalf("missing %s; forms = %v", c, forms)
-		}
 	}
 }
 
@@ -108,7 +78,7 @@ func TestGeneratedPluralsFileCoversEveryLocale(t *testing.T) {
 	}
 }
 
-func TestGoCodeIsTypedAndBranchesOnZero(t *testing.T) {
+func TestGoCodeIsTyped(t *testing.T) {
 	out := pluralProject(t)
 	src := string(file(t, out, "go/messages_gen.go"))
 
@@ -117,8 +87,5 @@ func TestGoCodeIsTypedAndBranchesOnZero(t *testing.T) {
 	}
 	if !strings.Contains(src, "Count int") {
 		t.Fatal("the count parameter is not typed as an int")
-	}
-	if !strings.Contains(src, "if p.Count == 0") {
-		t.Fatal("no zero branch, so the zero band is unreachable in Go")
 	}
 }

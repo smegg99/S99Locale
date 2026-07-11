@@ -35,15 +35,6 @@ func GoBundle(out *Output, cfg *config.Config, set *message.Set) error {
 				return fmt.Errorf("generate: %s: %w", key, err)
 			}
 			bundle[key] = entry
-
-			// The zero band goes out as its own message. Inside the plural it
-			// would be dead: no CLDR rule returns "zero" for these locales, so
-			// only the generated accessor's count==0 branch can reach it.
-			if m.Kind == message.KindPlural {
-				if text, ok := m.Plural.Forms[message.CatZero]; ok {
-					bundle[key+".zero"] = goTemplate(text)
-				}
-			}
 		}
 
 		if err := out.AddJSON(goLayout(cfg).bundle(locale), bundle); err != nil {
@@ -61,9 +52,6 @@ func goEntry(m *message.Message, rule plural.Rule) (any, error) {
 
 	forms := map[string]any{}
 	for _, c := range rule.Bands(m.Plural) {
-		if c == message.CatZero {
-			continue // written separately; see GoBundle
-		}
 		forms[string(c)] = goTemplate(m.Plural.Forms[c])
 	}
 	if len(forms) == 0 {

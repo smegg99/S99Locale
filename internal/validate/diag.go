@@ -44,7 +44,6 @@ const (
 	CodeGoCollision    = "I18N015" // two placeholders collide once PascalCased
 	CodeOverride       = "I18N016" // a later root shadowed an earlier one
 	CodePluralArgType  = "I18N018" // plural argument is not an integer
-	CodeZeroMismatch   = "I18N019" // the zero band is declared in some locales
 )
 
 type Diagnostic struct {

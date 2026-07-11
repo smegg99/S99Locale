@@ -123,7 +123,6 @@ reeds:
   plural:
     argument: count
     forms:
-      zero: "brak głosów"
       one: "{count} głos"
       few: "{count} głosy"
       many: "{count} głosów"
@@ -140,11 +139,8 @@ reeds:
 	if m.Plural.Argument != "count" {
 		t.Fatalf("argument = %q", m.Plural.Argument)
 	}
-	if len(m.Plural.Forms) != 5 {
-		t.Fatalf("%d forms, want 5", len(m.Plural.Forms))
-	}
-	if m.Plural.Forms[message.CatZero] != "brak głosów" {
-		t.Fatal("the zero band was lost")
+	if len(m.Plural.Forms) != 4 {
+		t.Fatalf("%d forms, want 4", len(m.Plural.Forms))
 	}
 }
 

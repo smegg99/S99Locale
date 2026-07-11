@@ -14,7 +14,6 @@ digest:
     plural:
       argument: count
       forms:
-        zero: "Nothing new"
         one: "1 new message"
         other: "{count} new messages"
     description: "Digest subject line. Counted, and rendered by Go."

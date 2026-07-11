@@ -48,19 +48,6 @@ func TestUnknownLocaleIsRejected(t *testing.T) {
 	}
 }
 
-// Zero is allowed everywhere and required nowhere: no rule selects it.
-func TestZeroIsOptInEverywhere(t *testing.T) {
-	for _, locale := range []string{"en", "pl", "ja"} {
-		r := rule(t, locale)
-		if !r.Allows(message.CatZero) {
-			t.Fatalf("%s disallows zero", locale)
-		}
-		if r.Requires(message.CatZero) {
-			t.Fatalf("%s requires zero, but no plural rule ever picks it", locale)
-		}
-	}
-}
-
 func TestMissingCategories(t *testing.T) {
 	p := &message.Plural{Argument: "count", Forms: map[message.Category]string{
 		message.CatOne:   "{count} głos",
@@ -99,13 +86,12 @@ func TestBandsAreOrderedNotDeclarationOrder(t *testing.T) {
 	p := &message.Plural{Argument: "count", Forms: map[message.Category]string{
 		message.CatOther: "d",
 		message.CatOne:   "b",
-		message.CatZero:  "a",
 		message.CatMany:  "e",
 		message.CatFew:   "c",
 	}}
 
 	want := []message.Category{
-		message.CatZero, message.CatOne, message.CatFew, message.CatMany, message.CatOther,
+		message.CatOne, message.CatFew, message.CatMany, message.CatOther,
 	}
 	if got := rule(t, "pl").Bands(p); !slices.Equal(got, want) {
 		t.Fatalf("bands = %v, want %v", got, want)
@@ -121,23 +107,6 @@ func TestBandsSkipUndeclared(t *testing.T) {
 	want := []message.Category{message.CatOne, message.CatOther}
 	if got := rule(t, "en").Bands(p); !slices.Equal(got, want) {
 		t.Fatalf("bands = %v, want %v", got, want)
-	}
-}
-
-// `zero` is the opt-in extra band here, not a CLDR category. Arabic, Welsh and
-// Latvian have a real CLDR zero, so adding one to the table would give the same
-// name two meanings and silently shift every band after it.
-func TestNoLocaleRequiresZero(t *testing.T) {
-	for _, locale := range plural.Locales() {
-		rule, err := plural.For(locale)
-		if err != nil {
-			t.Fatalf("%s: %v", locale, err)
-		}
-		for _, c := range rule.Required {
-			if c == message.CatZero {
-				t.Errorf("%s requires zero, which collides with the opt-in band", locale)
-			}
-		}
 	}
 }
 

@@ -26,11 +26,6 @@ type Rule struct {
 // Taken from CLDR, cross-checked against go-i18n v2.6.1's generated rules so
 // the two halves of a build cannot disagree about what "few" means. Which band
 // a count selects is not decided here - see generate.Plurals.
-//
-// A language whose CLDR rules include a real `zero` category cannot go in this
-// table as it stands: ar, cy and lv all have one, and `zero` is reserved here
-// for the opt-in band that no rule selects. Adding one would give a message two
-// different meanings for the same name. TestNoLocaleRequiresZero holds the line.
 var rules = map[string]Rule{
 	"en": {Required: []message.Category{message.CatOne, message.CatOther}},
 	"pl": {Required: []message.Category{message.CatOne, message.CatFew, message.CatMany, message.CatOther}},
@@ -89,16 +84,6 @@ func Locales() []string {
 	return out
 }
 
-// Allowed is Required plus zero.
-//
-// Zero is an opt-in extra band, not a CLDR category. No targeted locale's rule
-// ever selects it - Polish resolves a count of 0 to Many - so it exists only
-// because "brak głosów" reads better than "0 głosów", and only generated code
-// branches on it.
-func (r Rule) Allowed() []message.Category {
-	return append([]message.Category{message.CatZero}, r.Required...)
-}
-
 func (r Rule) Requires(c message.Category) bool {
 	for _, want := range r.Required {
 		if want == c {
@@ -106,10 +91,6 @@ func (r Rule) Requires(c message.Category) bool {
 		}
 	}
 	return false
-}
-
-func (r Rule) Allows(c message.Category) bool {
-	return c == message.CatZero || r.Requires(c)
 }
 
 // Missing returns required categories a message did not declare.
@@ -127,7 +108,7 @@ func (r Rule) Missing(p *message.Plural) []message.Category {
 func (r Rule) Extra(p *message.Plural) []message.Category {
 	var out []message.Category
 	for _, c := range p.Categories() {
-		if !r.Allows(c) {
+		if !r.Requires(c) {
 			out = append(out, c)
 		}
 	}
@@ -142,7 +123,7 @@ func (r Rule) Extra(p *message.Plural) []message.Category {
 func (r Rule) Bands(p *message.Plural) []message.Category {
 	var out []message.Category
 	for _, c := range message.CategoryOrder {
-		if !r.Allows(c) {
+		if !r.Requires(c) {
 			continue
 		}
 		if _, ok := p.Forms[c]; ok {

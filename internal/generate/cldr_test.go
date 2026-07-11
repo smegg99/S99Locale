@@ -52,25 +52,6 @@ if (bad.length) {
 }
 `
 
-// zeroHarness covers the opt-in band, which shifts every other index by one.
-const zeroHarness = `
-import { pluralRules } from './plurals.gen.ts'
-
-const en = pluralRules['en']
-const bad: string[] = []
-
-// Three bands means the message declared zero: [zero, one, other].
-if (en(0, 3) !== 0) bad.push('0 did not select the zero band, got ' + en(0, 3))
-if (en(1, 3) !== 1) bad.push('1 did not select one, got ' + en(1, 3))
-if (en(2, 3) !== 2) bad.push('2 did not select other, got ' + en(2, 3))
-
-// Two bands means it did not, and nothing shifts.
-if (en(0, 2) !== 1) bad.push('0 without a zero band should be other, got ' + en(0, 2))
-if (en(1, 2) !== 0) bad.push('1 without a zero band should be one, got ' + en(1, 2))
-
-if (bad.length) { console.error(bad.join('\n')); process.exit(1) }
-`
-
 func TestGeneratedIndexAgreesWithCLDRForEveryLocale(t *testing.T) {
 	node := requireNode(t)
 
@@ -84,19 +65,6 @@ func TestGeneratedIndexAgreesWithCLDRForEveryLocale(t *testing.T) {
 
 	if output, err := runNode(node, dir); err != nil {
 		t.Fatalf("the generated index disagrees with CLDR:\n%s", output)
-	}
-}
-
-func TestZeroBandShiftsEveryOtherIndex(t *testing.T) {
-	node := requireNode(t)
-	out := localesProject(t, []string{"en"})
-
-	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "plurals.gen.ts"), file(t, out, "web/plurals.gen.ts"))
-	writeFile(t, filepath.Join(dir, "harness.mts"), []byte(zeroHarness))
-
-	if output, err := runNode(node, dir); err != nil {
-		t.Fatalf("zero band indexing is wrong:\n%s", output)
 	}
 }
 

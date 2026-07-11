@@ -95,36 +95,6 @@ files:
 	}
 }
 
-// The count argument counts as used even where a form does not interpolate it.
-func TestZeroBandWithoutInterpolationStillDeclaresTheArgument(t *testing.T) {
-	r := project(t, map[string]string{
-		"en/a.yaml": `
-reeds:
-  plural:
-    argument: count
-    forms: {zero: "no reeds", one: "{count} reed", other: "{count} reeds"}
-  placeholders:
-    count: {type: integer}
-`,
-		"pl/a.yaml": `
-reeds:
-  plural:
-    argument: count
-    forms:
-      zero: "brak głosów"
-      one: "{count} głos"
-      few: "{count} głosy"
-      many: "{count} głosów"
-      other: "{count} głosów"
-  placeholders:
-    count: {type: integer}
-`})
-
-	if r.HasErrors() {
-		t.Fatalf("a valid zero band was rejected: %v", r.Diagnostics)
-	}
-}
-
 // user_id and userId both become .UserId in Go.
 func TestGoFieldCollision(t *testing.T) {
 	body := "x:\n  value: \"{user_id} {userId}\"\n" +
@@ -198,57 +168,5 @@ files:
 
 	if has(r, validate.CodePluralArgType) {
 		t.Fatalf("an integer argument was rejected: %v", codes(r))
-	}
-}
-
-// Required categories differ per locale by design. The opt-in zero band does
-// not: one locale saying "no files" while another says "0 files" is drift.
-func TestZeroBandMustBeAllLocalesOrNone(t *testing.T) {
-	r := project(t, map[string]string{
-		"en/a.yaml": `
-files:
-  plural:
-    argument: count
-    forms: {zero: "no files", one: "{count} file", other: "{count} files"}
-  placeholders:
-    count: {type: integer}
-`,
-		"pl/a.yaml": `
-files:
-  plural:
-    argument: count
-    forms: {one: "{count} plik", few: "{count} pliki", many: "{count} plikow", other: "{count} plikow"}
-  placeholders:
-    count: {type: integer}
-`})
-
-	d := find(t, r, validate.CodeZeroMismatch)
-	if d.Locale != "pl" {
-		t.Fatalf("wrong locale flagged: %+v", d)
-	}
-}
-
-// The band counts differ legitimately: two in English, four in Polish.
-func TestDifferingRequiredCategoriesAreNotAMismatch(t *testing.T) {
-	r := project(t, map[string]string{
-		"en/a.yaml": `
-files:
-  plural:
-    argument: count
-    forms: {one: "{count} file", other: "{count} files"}
-  placeholders:
-    count: {type: integer}
-`,
-		"pl/a.yaml": `
-files:
-  plural:
-    argument: count
-    forms: {one: "{count} plik", few: "{count} pliki", many: "{count} plikow", other: "{count} plikow"}
-  placeholders:
-    count: {type: integer}
-`})
-
-	if has(r, validate.CodeZeroMismatch) {
-		t.Fatalf("English having fewer categories was reported: %v", codes(r))
 	}
 }

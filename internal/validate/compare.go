@@ -27,10 +27,6 @@ func compare(r *Report, ref, m *message.Message, base string) {
 	comparePlaceholderSets(r, ref, m, base)
 	comparePlaceholderTypes(r, ref, m, base)
 
-	if m.Kind == message.KindPlural {
-		compareZeroBand(r, ref, m, base)
-	}
-
 	if m.Kind == message.KindPlural && ref.Plural.Argument != m.Plural.Argument {
 		r.add(Diagnostic{
 			Code: CodePluralArgument, Severity: SevError, Key: m.Key, Locale: m.Locale,
@@ -42,34 +38,6 @@ func compare(r *Report, ref, m *message.Message, base string) {
 			},
 		})
 	}
-}
-
-// compareZeroBand requires the opt-in band to be all or nothing.
-//
-// The required categories legitimately differ per locale - Polish has four
-// where English has two - but zero is not one of them. It is a choice about the
-// message, so a locale that lacks it renders "0 items" where another says
-// "no items", and only the reader notices.
-func compareZeroBand(r *Report, ref, m *message.Message, base string) {
-	_, want := ref.Plural.Forms[message.CatZero]
-	_, got := m.Plural.Forms[message.CatZero]
-	if want == got {
-		return
-	}
-
-	has, lacks := base, m.Locale
-	if got {
-		has, lacks = m.Locale, base
-	}
-	r.add(Diagnostic{
-		Code: CodeZeroMismatch, Severity: SevError, Key: m.Key, Locale: m.Locale,
-		Source: m.Source,
-		Detail: "the opt-in zero band is declared in one locale but not another",
-		Context: []Pair{
-			{Label: has, Value: "declares zero"},
-			{Label: lacks, Value: "does not"},
-		},
-	})
 }
 
 func comparePlaceholderSets(r *Report, ref, m *message.Message, base string) {

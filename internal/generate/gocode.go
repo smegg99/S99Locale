@@ -16,9 +16,6 @@ import (
 //
 // go-i18n's TemplateData is map[string]any, so a misspelled placeholder
 // compiles and renders nothing. These wrappers make it a compile error.
-//
-// They also carry the zero band: no CLDR rule selects "zero" - Polish resolves
-// a count of 0 to Many - so without generated code the band is unreachable.
 func GoCode(out *Output, cfg *config.Config, set *message.Set) error {
 	if cfg.Go.Package == "" {
 		return nil
@@ -159,10 +156,6 @@ func accessor(m *message.Message, name string) string {
 	}
 
 	arg := validate.GoField(m.Plural.Argument)
-	if _, hasZero := m.Plural.Forms[message.CatZero]; hasZero {
-		b.WriteString("\t// No CLDR rule selects \"zero\"; it is an opt-in band.\n")
-		fmt.Fprintf(&b, "\tif p.%s == 0 {\n\t\treturn zeroForm(l, %q, data)\n\t}\n", arg, m.Key)
-	}
 	fmt.Fprintf(&b, "\treturn withCount(l, %q, p.%s, data)\n}\n", m.Key, arg)
 
 	return b.String()

@@ -44,15 +44,10 @@ type Placeholder struct {
 	Type PlaceholderType
 }
 
-// Category is a CLDR plural category, plus Zero.
-//
-// CLDR has a zero category, but no locale we target selects it: Polish resolves
-// a count of 0 to Many. It is kept as an opt-in band that the generated code
-// branches on, never something a plural rule picks.
+// Category is a CLDR plural category.
 type Category string
 
 const (
-	CatZero  Category = "zero"
 	CatOne   Category = "one"
 	CatTwo   Category = "two"
 	CatFew   Category = "few"
@@ -61,7 +56,7 @@ const (
 )
 
 // CategoryOrder is the band order for every generated pipe string and index function.
-var CategoryOrder = []Category{CatZero, CatOne, CatTwo, CatFew, CatMany, CatOther}
+var CategoryOrder = []Category{CatOne, CatTwo, CatFew, CatMany, CatOther}
 
 func ParseCategory(s string) (Category, error) {
 	for _, c := range CategoryOrder {

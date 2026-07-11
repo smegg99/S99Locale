@@ -14,7 +14,6 @@ digest:
     plural:
       argument: count
       forms:
-        zero: "Nic nowego"
         one: "1 nowa wiadomość"
         few: "{count} nowe wiadomości"
         many: "{count} nowych wiadomości"

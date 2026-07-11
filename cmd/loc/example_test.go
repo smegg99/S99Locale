@@ -88,10 +88,10 @@ func TestExampleOutputIsLoadable(t *testing.T) {
 	if app["greeting"] != "Cześć {name}" {
 		t.Fatalf("vue greeting = %v", app["greeting"])
 	}
-	// Polish: four bands plus the opt-in zero.
+	// Polish: all four CLDR bands.
 	files, _ := app["files"].(string)
-	if n := strings.Count(files, "|"); n != 4 {
-		t.Fatalf("%d separators in %q, want 4", n, files)
+	if n := strings.Count(files, "|"); n != 3 {
+		t.Fatalf("%d separators in %q, want 3", n, files)
 	}
 
 	backend := readJSON(t, filepath.Join(generated, "backend", "pl.json"))

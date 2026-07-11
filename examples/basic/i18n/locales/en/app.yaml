@@ -11,9 +11,8 @@ files:
   plural:
     argument: count
     forms:
-      zero: "No files"
       one: "{count} file"
       other: "{count} files"
-  description: "File count. The zero band is opt-in, not a CLDR category."
+  description: "File count."
   placeholders:
     count: {type: integer}

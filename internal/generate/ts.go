@@ -74,19 +74,13 @@ function select(tag: string, n: number): string {
 }
 
 // band maps a count onto a position in the bands a message declares.
-//
-// Zero is an opt-in extra that no CLDR rule selects, so it is tested before
-// the rule runs and shifts everything after it by one.
 function band(tag: string, cats: readonly string[], choice: number, choicesLength: number): number {
   const n = Math.abs(Math.floor(choice))
-  const hasZero = choicesLength > cats.length
-  const base = hasZero ? 1 : 0
-  if (hasZero && n === 0) return 0
 
   // A category outside the table degrades to the last band rather than
   // indexing past the end.
   const i = cats.indexOf(select(tag, n))
-  return Math.min(base + (i < 0 ? cats.length - 1 : i), choicesLength - 1)
+  return Math.min(i < 0 ? cats.length - 1 : i, choicesLength - 1)
 }
 `
 

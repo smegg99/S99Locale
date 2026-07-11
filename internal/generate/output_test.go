@@ -159,15 +159,6 @@ x:
 	}
 }
 
-func keysOf(m map[string]any) []string {
-	out := make([]string, 0, len(m))
-	for k := range m {
-		out = append(out, k)
-	}
-	slices.Sort(out)
-	return out
-}
-
 // Generated Go must already be gofmt-canonical.
 func TestGeneratedGoIsGofmtStable(t *testing.T) {
 	out := pluralProject(t)
