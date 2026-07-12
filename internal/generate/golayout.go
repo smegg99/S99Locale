@@ -3,11 +3,16 @@
 package generate
 
 import (
+	"bufio"
 	"fmt"
+	"io"
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/smegg99/s99locale/internal/config"
+	"github.com/smegg99/s99locale/internal/message"
 )
 
 // layout is where the Go target's files go, relative to the output they are
@@ -43,13 +48,38 @@ func (l layout) bundle(locale string) string {
 	return fmt.Sprintf("backend/%s.json", locale)
 }
 
-// Owns is what loc may remove from a package it shares with hand-written
-// source: the accessors it emits, and the whole bundle directory. `loc clean`
-// asks the same question the build does.
-func Owns(rel string) bool {
+// Owns reports whether loc may remove rel from a directory it shares with
+// hand-written source.
+func Owns(dir, rel string) (bool, error) {
 	rel = path.Clean(rel)
 	if strings.HasPrefix(rel, "locales/") {
-		return true
+		return true, nil
 	}
-	return !strings.Contains(rel, "/") && strings.HasSuffix(rel, "_gen.go")
+	if strings.Contains(rel, "/") || !strings.HasSuffix(rel, "_gen.go") {
+		return false, nil
+	}
+	// A *_gen.go must carry loc's own header. Another generator's output has
+	// the same name shape: S99Deploy holds a cue_types_main_gen.go written by
+	// `cue exp gengotypes`, and deleting it would be silent and unrecoverable.
+	return hasGeneratedHeader(filepath.Join(dir, filepath.FromSlash(rel)))
+}
+
+// hasGeneratedHeader reads the first line only. A file that is gone is not
+// loc's to remove either, which is why IsNotExist is false and not an error.
+func hasGeneratedHeader(full string) (bool, error) {
+	file, err := os.Open(full)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("generate: open %s: %w", full, err)
+	}
+	defer file.Close()
+
+	reader := bufio.NewReader(file)
+	first, err := reader.ReadString('\n')
+	if err != nil && err != io.EOF {
+		return false, fmt.Errorf("generate: read %s: %w", full, err)
+	}
+	return strings.HasPrefix(first, message.GeneratedHeader), nil
 }

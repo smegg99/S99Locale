@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/smegg99/s99locale/internal/config"
@@ -46,15 +47,18 @@ func cmdClean(path string) error {
 		if err != nil {
 			return err
 		}
-		says("loc: removed %d generated file(s) from %s\n", removed, shared)
+		for _, name := range removed {
+			says("loc: removed %s\n", filepath.Join(shared, name))
+		}
 	}
 	return nil
 }
 
 // removeOwned deletes the files loc generates inside a shared package, and
 // nothing else in it.
-func removeOwned(dir string) (int, error) {
-	count := 0
+func removeOwned(dir string) ([]string, error) {
+	var removed []string
+
 	err := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
 			if os.IsNotExist(err) && p == dir {
@@ -69,19 +73,24 @@ func removeOwned(dir string) (int, error) {
 		if err != nil {
 			return err
 		}
-		if !generate.Owns(filepath.ToSlash(rel)) {
+		mine, err := generate.Owns(dir, filepath.ToSlash(rel))
+		if err != nil {
+			return err
+		}
+		if !mine {
 			return nil
 		}
 		if err := os.Remove(p); err != nil {
 			return err
 		}
-		count++
+		removed = append(removed, filepath.ToSlash(rel))
 		return nil
 	})
 	if err != nil {
-		return count, fmt.Errorf("clean %s: %w", dir, err)
+		return removed, fmt.Errorf("clean %s: %w", dir, err)
 	}
-	return count, nil
+	sort.Strings(removed)
+	return removed, nil
 }
 
 // removable decides whether RemoveAll may be pointed at the output directory.

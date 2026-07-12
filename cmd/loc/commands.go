@@ -99,12 +99,9 @@ func cmdBuild(ctx context.Context, path string, strict bool) error {
 	}
 
 	total := len(out.Files())
-	if removed > 0 {
-		// Named, because a silent deletion under a generated tree is the kind
-		// of thing someone later has to bisect for.
-		says("loc: %d file(s) generated, %d changed, %d removed\n", total, written, removed)
-		return nil
-	}
 	says("loc: %d file(s) generated, %d changed\n", total, written)
+	for _, name := range removed {
+		says("loc: removed %s\n", name)
+	}
 	return nil
 }

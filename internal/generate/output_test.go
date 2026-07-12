@@ -203,8 +203,8 @@ func TestWriteRemovesOutputItNoLongerProduces(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if removed != 1 {
-		t.Fatalf("removed %d orphan(s), want 1", removed)
+	if len(removed) != 1 || removed[0] != filepath.Join("web", "de", "common.json") {
+		t.Fatalf("removed = %v, want exactly web/de/common.json", removed)
 	}
 	if _, err := os.Stat(orphan); !os.IsNotExist(err) {
 		t.Fatalf("orphan survived the build: %v", err)

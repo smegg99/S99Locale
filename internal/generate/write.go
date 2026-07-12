@@ -32,7 +32,7 @@ type Output struct {
 	// owns reports whether a path under Dir is loc's to remove. Nil means the
 	// whole tree is, which is true of the output directory. A Go package that
 	// holds hand-written source beside the generated bundle supplies one.
-	owns func(rel string) bool
+	owns func(dir, rel string) (bool, error)
 }
 
 func NewOutput(dir string) *Output { return &Output{Dir: dir, fs: osFS{}} }
@@ -40,7 +40,7 @@ func NewOutput(dir string) *Output { return &Output{Dir: dir, fs: osFS{}} }
 // NewSharedOutput is an output in a directory loc does not own outright. Only
 // paths the predicate accepts are ever removed; everything else is left alone,
 // and the directory itself is never pruned.
-func NewSharedOutput(dir string, owns func(rel string) bool) *Output {
+func NewSharedOutput(dir string, owns func(dir, rel string) (bool, error)) *Output {
 	return &Output{Dir: dir, fs: osFS{}, owns: owns}
 }
 
@@ -73,17 +73,17 @@ func (o *Output) Files() []File {
 // full disk, a read-only tree - lands in the staging phase, where nothing has
 // been committed and nothing has been deleted. Renaming is what remains, and it
 // is orders of magnitude less likely to fail partway.
-func (o *Output) Write() (written, removed int, err error) {
+func (o *Output) Write() (written int, removed []string, err error) {
 	staged, err := o.prepare()
 	if err != nil {
 		// Nothing is visible yet, so the tree is exactly as it was.
 		o.discard(staged)
-		return 0, 0, err
+		return 0, nil, err
 	}
 
 	for _, s := range staged {
 		if err := o.fs.Rename(s.temp, s.dest); err != nil {
-			return written, 0, err
+			return written, nil, err
 		}
 		written++
 	}
@@ -96,7 +96,7 @@ func (o *Output) Write() (written, removed int, err error) {
 		if err := o.fs.Remove(filepath.Join(o.Dir, rel)); err != nil {
 			return written, removed, err
 		}
-		removed++
+		removed = append(removed, rel)
 	}
 	if o.owns != nil {
 		// Not loc's directory to tidy: an empty `locales/` is still the app's.
@@ -211,8 +211,14 @@ func (o *Output) orphans() ([]string, error) {
 		if _, ok := want[rel]; ok {
 			return nil
 		}
-		if o.owns != nil && !o.owns(rel) {
-			return nil
+		if o.owns != nil {
+			mine, err := o.owns(o.Dir, filepath.ToSlash(rel))
+			if err != nil {
+				return err
+			}
+			if !mine {
+				return nil
+			}
 		}
 		extra = append(extra, rel)
 		return nil

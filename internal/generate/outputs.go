@@ -34,15 +34,22 @@ func (o *Outputs) Files() []File {
 // Write commits every tree. A failure leaves the trees already written in
 // place: they are each atomic on their own, and the caller is told which step
 // failed rather than left with a half-reverted build.
-func (o *Outputs) Write() (written, removed int, err error) {
+func (o *Outputs) Write() (written int, removed []string, err error) {
 	for _, one := range o.all() {
 		w, r, err := one.Write()
 		written += w
-		removed += r
+		for _, rel := range r {
+			if one == o.Primary {
+				removed = append(removed, rel)
+				continue
+			}
+			removed = append(removed, filepath.Join(one.Dir, rel))
+		}
 		if err != nil {
 			return written, removed, err
 		}
 	}
+	sort.Strings(removed)
 	return written, removed, nil
 }
 
