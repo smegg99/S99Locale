@@ -1,9 +1,10 @@
 module github.com/smegg99/s99locale
 
-go 1.26
+go 1.27
 
 require (
 	cuelang.org/go v0.17.1
+	github.com/fsnotify/fsnotify v1.10.1
 	github.com/goccy/go-yaml v1.19.2
 	github.com/spf13/cobra v1.10.2
 )
@@ -11,7 +12,6 @@ require (
 require (
 	github.com/cockroachdb/apd/v3 v3.2.3 // indirect
 	github.com/emicklei/proto v1.14.3 // indirect
-	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect

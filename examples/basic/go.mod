@@ -7,7 +7,7 @@
 
 module example.invalid/basic
 
-go 1.26
+go 1.27
 
 require github.com/nicksnyder/go-i18n/v2 v2.6.1
 
