@@ -3,19 +3,37 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/smegg99/s99locale/internal/config"
 	"github.com/smegg99/s99locale/internal/generate"
 	"github.com/smegg99/s99locale/internal/lock"
 )
 
-func cmdClean(path string) error {
-	cfg, err := config.Load(path)
+func newCleanCmd(a *app) *cobra.Command {
+	return &cobra.Command{
+		Use:   "clean",
+		Short: "Remove generated artefacts",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return cmdClean(cmd.Context(), a)
+		},
+	}
+}
+
+func cmdClean(ctx context.Context, a *app) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	cfg, err := config.Load(a.opts.configPath)
 	if err != nil {
 		return err
 	}
@@ -32,13 +50,13 @@ func cmdClean(path string) error {
 	defer held.Release()
 
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		says("loc: nothing to clean\n")
+		a.says("loc: nothing to clean\n")
 		return nil
 	}
 	if err := os.RemoveAll(dir); err != nil {
 		return fmt.Errorf("clean %s: %w", dir, err)
 	}
-	says("loc: removed %s\n", dir)
+	a.says("loc: removed %s\n", dir)
 
 	// A Go target placed in the package that embeds it shares that directory
 	// with hand-written source, so only what loc owns there goes.
@@ -48,7 +66,7 @@ func cmdClean(path string) error {
 			return err
 		}
 		for _, name := range removed {
-			says("loc: removed %s\n", filepath.Join(shared, name))
+			a.says("loc: removed %s\n", filepath.Join(shared, name))
 		}
 	}
 	return nil

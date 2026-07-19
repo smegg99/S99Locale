@@ -15,9 +15,10 @@ import (
 // delete a file it thinks is debris.
 func TestConcurrentBuildsDoNotLoseFiles(t *testing.T) {
 	path := project(t, valid)
+	a, _, _ := testApp(t, options{configPath: path})
 	ctx := context.Background()
 
-	if _, err := run(t, func() error { return cmdBuild(ctx, path, false) }); err != nil {
+	if err := cmdBuild(ctx, a); err != nil {
 		t.Fatal(err)
 	}
 	generated := filepath.Join(filepath.Dir(path), "generated")
@@ -37,7 +38,8 @@ func TestConcurrentBuildsDoNotLoseFiles(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			errs <- cmdBuild(ctx, path, false)
+			racer, _, _ := testApp(t, options{configPath: path})
+			errs <- cmdBuild(ctx, racer)
 		}()
 	}
 	wg.Wait()
@@ -52,7 +54,7 @@ func TestConcurrentBuildsDoNotLoseFiles(t *testing.T) {
 	if got := countFiles(t, generated); got != want {
 		t.Fatalf("%d files after concurrent builds, want %d", got, want)
 	}
-	if _, err := run(t, func() error { return cmdCheck(ctx, path, false, false) }); err != nil {
+	if err := cmdCheck(ctx, a, false); err != nil {
 		t.Fatalf("check after concurrent builds: %v", err)
 	}
 }

@@ -5,10 +5,10 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"os"
 	"sort"
 	"strings"
+
+	"github.com/spf13/cobra"
 
 	"github.com/smegg99/s99locale/internal/config"
 	"github.com/smegg99/s99locale/internal/generate"
@@ -17,12 +17,62 @@ import (
 	"github.com/smegg99/s99locale/internal/shared"
 )
 
+func newLintCmd(a *app) *cobra.Command {
+	var asJSON bool
+
+	cmd := &cobra.Command{
+		Use:   "lint",
+		Short: "Report messages that may be duplicates",
+		Long: "Never modifies anything. Merging is a decision, and an ordinary\n" +
+			"build is not the place to make it.",
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return cmdLintShared(cmd.Context(), a, false, asJSON)
+		},
+	}
+
+	cmd.PersistentFlags().BoolVar(&a.opts.strict, "strict", false, "warnings, and lint keys findings, fail the lint")
+	cmd.PersistentFlags().BoolVar(&asJSON, "json", false, "machine-readable output")
+
+	shared := &cobra.Command{
+		Use:   "shared",
+		Short: "Keys that may belong in a shared namespace",
+		Args:  cobra.NoArgs,
+	}
+	var verbose bool
+	shared.Flags().BoolVar(&verbose, "verbose", false, "include medium and low confidence findings")
+	shared.RunE = func(cmd *cobra.Command, _ []string) error {
+		return cmdLintShared(cmd.Context(), a, verbose, asJSON)
+	}
+
+	cmd.AddCommand(
+		shared,
+		&cobra.Command{
+			Use:   "keys",
+			Short: "Unused and missing keys, from a source scan",
+			Args:  cobra.NoArgs,
+			RunE: func(cmd *cobra.Command, _ []string) error {
+				return cmdLintKeys(cmd.Context(), a, asJSON)
+			},
+		},
+		&cobra.Command{
+			Use:   "duplicates",
+			Short: "Exact duplicate contracts, whatever they are named",
+			Args:  cobra.NoArgs,
+			RunE: func(cmd *cobra.Command, _ []string) error {
+				return cmdLintDuplicates(cmd.Context(), a, asJSON)
+			},
+		},
+	)
+	return cmd
+}
+
 // cmdLintShared reports keys that may be one message.
 //
 // Only high confidence is shown by default; medium and low are right often
 // enough to keep but wrong often enough to hide behind --verbose.
-func cmdLintShared(ctx context.Context, configPath string, verbose, asJSON bool) error {
-	cfg, set, err := loadAndReport(ctx, configPath, false)
+func cmdLintShared(ctx context.Context, a *app, verbose, asJSON bool) error {
+	cfg, set, err := loadAndReport(ctx, a)
 	if err != nil {
 		return err
 	}
@@ -37,57 +87,57 @@ func cmdLintShared(ctx context.Context, configPath string, verbose, asJSON bool)
 	}
 
 	if asJSON {
-		enc := json.NewEncoder(os.Stdout)
+		enc := json.NewEncoder(a.data)
 		enc.SetIndent("", "  ")
 		return enc.Encode(map[string]any{"candidates": shown})
 	}
 
 	if len(shown) == 0 {
-		fmt.Println("loc: no shared-message candidates")
+		a.says("loc: no shared-message candidates\n")
 		if hidden := len(all) - len(shown); hidden > 0 {
-			fmt.Printf("     %d lower-confidence finding(s); see --verbose\n", hidden)
+			a.says("     %d lower-confidence finding(s); see `loc lint shared --verbose`\n", hidden)
 		}
 		return nil
 	}
 
 	for _, c := range shown {
-		printCandidate(c)
+		printCandidate(a, c)
 	}
 
-	fmt.Printf("%d candidate(s)\n", len(shown))
+	a.warns("%d candidate(s)\n", len(shown))
 	if hidden := len(all) - len(shown); hidden > 0 {
-		fmt.Printf("%d lower-confidence finding(s) hidden; see --verbose\n", hidden)
+		a.warns("%d lower-confidence finding(s) hidden; see `loc lint shared --verbose`\n", hidden)
 	}
 	return nil
 }
 
-func printCandidate(c shared.Candidate) {
-	fmt.Printf("\nI18N021 possible shared message\n\n")
+func printCandidate(a *app, c shared.Candidate) {
+	a.warns("\nI18N021 possible shared message\n\n")
 
-	fmt.Println("  Keys:")
+	a.warns("  Keys:\n")
 	for _, key := range c.Keys {
-		fmt.Printf("    %s\n", key)
+		a.warns("    %s\n", key)
 	}
 
-	fmt.Println("\n  Translations:")
+	a.warns("\n  Translations:\n")
 	for _, locale := range sortedMapKeys(c.Translations) {
 		// A plural's forms are joined by a NUL; show the separator instead.
 		text := strings.ReplaceAll(c.Translations[locale], "\x00", " | ")
-		fmt.Printf("    %-4s %s\n", locale+":", text)
+		a.warns("    %-4s %s\n", locale+":", text)
 	}
 
 	if c.Suggested != "" {
-		fmt.Printf("\n  Suggested key:\n    %s\n", c.Suggested)
+		a.warns("\n  Suggested key:\n    %s\n", c.Suggested)
 	}
-	fmt.Printf("\n  Confidence:\n    %s\n", c.Confidence)
+	a.warns("\n  Confidence:\n    %s\n", c.Confidence)
 	if c.Reason != "" {
-		fmt.Printf("    %s\n", c.Reason)
+		a.warns("    %s\n", c.Reason)
 	}
 }
 
 // cmdLintDuplicates reports exact duplicate contracts, the unfiltered view of `lint shared`.
-func cmdLintDuplicates(ctx context.Context, configPath string, asJSON bool) error {
-	cfg, set, err := loadAndReport(ctx, configPath, false)
+func cmdLintDuplicates(ctx context.Context, a *app, asJSON bool) error {
+	cfg, set, err := loadAndReport(ctx, a)
 	if err != nil {
 		return err
 	}
@@ -100,19 +150,19 @@ func cmdLintDuplicates(ctx context.Context, configPath string, asJSON bool) erro
 	}
 
 	if asJSON {
-		enc := json.NewEncoder(os.Stdout)
+		enc := json.NewEncoder(a.data)
 		enc.SetIndent("", "  ")
 		return enc.Encode(map[string]any{"duplicates": exact})
 	}
 
 	if len(exact) == 0 {
-		fmt.Println("loc: no duplicate contracts")
+		a.says("loc: no duplicate contracts\n")
 		return nil
 	}
 	for _, c := range exact {
-		fmt.Printf("%-10s %s\n", c.Confidence, strings.Join(c.Keys, "  "))
+		a.warns("%-10s %s\n", c.Confidence, strings.Join(c.Keys, "  "))
 	}
-	fmt.Printf("\n%d duplicate contract(s)\n", len(exact))
+	a.warns("\n%d duplicate contract(s)\n", len(exact))
 	return nil
 }
 
@@ -125,18 +175,15 @@ func sortedMapKeys(m map[string]string) []string {
 	return out
 }
 
-// cmdLintKeys reports what the source scan and the declarations disagree about.
-//
-// Dynamic keys exist, so an unused key is a warning and never a deletion.
-// Nothing here fails the build.
-func cmdLintKeys(ctx context.Context, configPath string, asJSON bool) error {
-	cfg, set, err := loadAndReport(ctx, configPath, false)
+// cmdLintKeys fails on a finding only under --strict, because a dynamic key looks unused.
+func cmdLintKeys(ctx context.Context, a *app, asJSON bool) error {
+	cfg, set, err := loadAndReport(ctx, a)
 	if err != nil {
 		return err
 	}
 
 	if len(cfg.Scan) == 0 {
-		fmt.Println("loc: no scan roots configured; nothing to compare against")
+		a.says("loc: no scan roots configured; nothing to compare against\n")
 		return nil
 	}
 
@@ -149,39 +196,48 @@ func cmdLintKeys(ctx context.Context, configPath string, asJSON bool) error {
 	unused := scan.Unused(declared, refs, cfg.DynamicKeys)
 	missing := scan.Missing(declared, refs)
 
+	// One verdict for both forms, so --json exits as the human run does.
+	var verdict error
+	if a.opts.strict && len(missing)+len(unused) > 0 {
+		verdict = errFailed
+	}
+
 	if asJSON {
-		enc := json.NewEncoder(os.Stdout)
+		enc := json.NewEncoder(a.data)
 		enc.SetIndent("", "  ")
-		return enc.Encode(map[string]any{
+		if err := enc.Encode(map[string]any{
 			"filesScanned": refs.Files,
 			"unused":       unused,
 			"missing":      missing,
-		})
+		}); err != nil {
+			return err
+		}
+		return verdict
 	}
 
-	fmt.Printf("scanned %d file(s) in %d root(s)\n", refs.Files, len(cfg.Scan))
+	a.says("scanned %d file(s) in %d root(s)\n", refs.Files, len(cfg.Scan))
 
 	// An undeclared key renders raw, so this class is always a bug.
 	if len(missing) > 0 {
-		fmt.Printf("\nI18N030 referenced but not declared\n\n")
+		a.warns("\nI18N030 referenced but not declared\n\n")
 		for _, ref := range missing {
-			fmt.Printf("  %-40s %s:%d\n", ref.Key, ref.File, ref.Line)
+			a.warns("  %-40s %s:%d\n", ref.Key, ref.File, ref.Line)
 		}
 	}
 
 	if len(unused) > 0 {
-		fmt.Printf("\nI18N032 declared but not referenced\n\n")
+		a.warns("\nI18N032 declared but not referenced\n\n")
 		for _, key := range unused {
-			fmt.Printf("  %s\n", key)
+			a.warns("  %s\n", key)
 		}
-		fmt.Println("\n  A key built at runtime looks unused. Declare it under dynamicKeys")
-		fmt.Println("  rather than deleting it.")
+		a.warns("\n  A key built at runtime looks unused. Declare it under dynamicKeys\n")
+		a.warns("  rather than deleting it.\n")
 	}
 
 	if len(missing)+len(unused) == 0 {
-		fmt.Println("loc: every declared key is referenced, and every reference resolves")
+		a.says("loc: every declared key is referenced, and every reference resolves\n")
 	}
-	return nil
+	return verdict
 }
 
 // references scans for key usages, mapping generated Go names back to keys.

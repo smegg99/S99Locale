@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/spf13/cobra"
 
 	"github.com/smegg99/s99locale/internal/config"
 )
@@ -22,12 +23,27 @@ import (
 // file.
 const debounce = 150 * time.Millisecond
 
+func newWatchCmd(a *app) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "watch",
+		Short: "Rebuild on every change until interrupted",
+		Long: "Survives a validation error and keeps watching: a half-typed key is\n" +
+			"the normal state of a file being edited.",
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return cmdWatch(cmd.Context(), a)
+		},
+	}
+	cmd.Flags().BoolVar(&a.opts.strict, "strict", false, "warnings fail the rebuild")
+	return cmd
+}
+
 // cmdWatch rebuilds on change until interrupted.
 //
 // A validation error prints and the watcher keeps going: a half-typed key is
 // the normal state of a file being edited.
-func cmdWatch(ctx context.Context, configPath string, strict bool) error {
-	cfg, err := config.Load(configPath)
+func cmdWatch(ctx context.Context, a *app) error {
+	cfg, err := config.Load(a.opts.configPath)
 	if err != nil {
 		return err
 	}
@@ -39,8 +55,8 @@ func cmdWatch(ctx context.Context, configPath string, strict bool) error {
 	defer watcher.Close()
 
 	// The config itself, so changing a locale or a target takes effect.
-	if err := watcher.Add(filepath.Dir(configPath)); err != nil {
-		return fmt.Errorf("watch: %s: %w", configPath, err)
+	if err := watcher.Add(filepath.Dir(a.opts.configPath)); err != nil {
+		return fmt.Errorf("watch: %s: %w", a.opts.configPath, err)
 	}
 	for _, root := range cfg.AbsRoots() {
 		if err := watchTree(watcher, root); err != nil {
@@ -48,8 +64,8 @@ func cmdWatch(ctx context.Context, configPath string, strict bool) error {
 		}
 	}
 
-	fmt.Printf("loc: watching %d root(s); ctrl-c to stop\n", len(cfg.AbsRoots()))
-	rebuild(ctx, configPath, strict)
+	a.says("loc: watching %d root(s); ctrl-c to stop\n", len(cfg.AbsRoots()))
+	rebuild(ctx, a)
 
 	timer := time.NewTimer(0)
 	if !timer.Stop() {
@@ -59,7 +75,7 @@ func cmdWatch(ctx context.Context, configPath string, strict bool) error {
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Println("\nloc: stopped")
+			a.warns("\nloc: stopped\n")
 			return nil
 
 		case event, ok := <-watcher.Events:
@@ -78,13 +94,13 @@ func cmdWatch(ctx context.Context, configPath string, strict bool) error {
 			timer.Reset(debounce)
 
 		case <-timer.C:
-			rebuild(ctx, configPath, strict)
+			rebuild(ctx, a)
 
 		case err, ok := <-watcher.Errors:
 			if !ok {
 				return nil
 			}
-			fmt.Fprintln(os.Stderr, "loc: watch:", err)
+			a.warns("loc: watch: %v\n", err)
 		}
 	}
 }
@@ -121,13 +137,13 @@ func watchTree(watcher *fsnotify.Watcher, root string) error {
 }
 
 // rebuild runs one build and reports, swallowing failure so the loop survives.
-func rebuild(ctx context.Context, configPath string, strict bool) {
+func rebuild(ctx context.Context, a *app) {
 	stamp := time.Now().Format("15:04:05")
 
-	if err := cmdBuild(ctx, configPath, strict); err != nil {
+	if err := cmdBuild(ctx, a); err != nil {
 		// cmdBuild printed the diagnostics; this only marks the loop alive.
-		fmt.Fprintf(os.Stderr, "%s  build failed; still watching\n", stamp)
+		a.warns("%s  build failed; still watching\n", stamp)
 		return
 	}
-	fmt.Printf("%s  ok\n", stamp)
+	a.says("%s  ok\n", stamp)
 }

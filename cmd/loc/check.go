@@ -5,8 +5,8 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"os"
+
+	"github.com/spf13/cobra"
 
 	"github.com/smegg99/s99locale/internal/generate"
 	"github.com/smegg99/s99locale/internal/lock"
@@ -23,19 +23,38 @@ type CheckResult struct {
 	Diagnostics []validate.Diagnostic `json:"diagnostics"`
 }
 
+func newCheckCmd(a *app) *cobra.Command {
+	var asJSON bool
+
+	cmd := &cobra.Command{
+		Use:   "check",
+		Short: "Validate and confirm the generated output is current",
+		Long: "Never writes, which is what CI runs. Exit 1 means the locales are\n" +
+			"wrong or the output is stale; exit 2 means loc could not run at all.",
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return cmdCheck(cmd.Context(), a, asJSON)
+		},
+	}
+
+	cmd.Flags().BoolVar(&a.opts.strict, "strict", false, "warnings fail the check")
+	cmd.Flags().BoolVar(&asJSON, "json", false, "machine-readable output")
+
+	return cmd
+}
+
 // cmdCheck never writes; CI runs it.
-func cmdCheck(ctx context.Context, path string, strict, asJSON bool) error {
-	cfg, set, report, err := load(ctx, path, strict)
+func cmdCheck(ctx context.Context, a *app, asJSON bool) error {
+	cfg, set, report, err := load(ctx, a)
 	if err != nil {
-		// A config that would not load has no report to render, so JSON callers
-		// get the error on stderr and exit 2 like everyone else.
+		// A config that fails to load has no report, so --json gets the error on stderr and exit 2.
 		if report == nil || !asJSON {
 			if report != nil {
-				printReport(report)
+				a.printReport(report)
 			}
 			return err
 		}
-		return checkJSON(report, nil, 0, err)
+		return a.checkJSON(report, nil, 0, err)
 	}
 
 	// Shared: check only reads, so two CI jobs checking at once need not queue.
@@ -56,25 +75,24 @@ func cmdCheck(ctx context.Context, path string, strict, asJSON bool) error {
 	}
 
 	if asJSON {
-		return checkJSON(report, stale, len(out.Files()), nil)
+		return a.checkJSON(report, stale, len(out.Files()), nil)
 	}
-	printReport(report)
+	a.printReport(report)
 
 	if len(stale) > 0 {
-		fmt.Fprintf(os.Stderr, "generated output is stale; run `loc build`:\n")
+		a.warns("generated output is stale; run `loc build`:\n")
 		for _, p := range stale {
-			fmt.Fprintf(os.Stderr, "  %s\n", p)
+			a.warns("  %s\n", p)
 		}
 		return errFailed
 	}
 
-	says("loc: %d file(s) current\n", len(out.Files()))
+	a.says("loc: %d file(s) current\n", len(out.Files()))
 	return nil
 }
 
-// checkJSON writes the result to stdout and still fails the process, so a
-// machine-readable run has the same exit code as a human one.
-func checkJSON(report *validate.Report, stale []string, files int, loadErr error) error {
+// checkJSON writes the result to the data stream and keeps the human run's exit code.
+func (a *app) checkJSON(report *validate.Report, stale []string, files int, loadErr error) error {
 	res := CheckResult{
 		Current:     loadErr == nil && len(stale) == 0,
 		Files:       files,
@@ -90,7 +108,7 @@ func checkJSON(report *validate.Report, stale []string, files int, loadErr error
 		res.Diagnostics = []validate.Diagnostic{}
 	}
 
-	enc := json.NewEncoder(os.Stdout)
+	enc := json.NewEncoder(a.data)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(res); err != nil {
 		return err

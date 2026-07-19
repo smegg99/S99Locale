@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,14 +14,15 @@ import (
 
 func TestCleanRemovesOnlyTheOutput(t *testing.T) {
 	path := project(t, valid)
+	a, _, _ := testApp(t, options{configPath: path})
 	ctx := context.Background()
 
-	if _, err := run(t, func() error { return cmdBuild(ctx, path, false) }); err != nil {
+	if err := cmdBuild(ctx, a); err != nil {
 		t.Fatal(err)
 	}
 
 	dir := filepath.Dir(path)
-	if _, err := run(t, func() error { return cmdClean(path) }); err != nil {
+	if err := cmdClean(ctx, a); err != nil {
 		t.Fatal(err)
 	}
 
@@ -30,6 +32,25 @@ func TestCleanRemovesOnlyTheOutput(t *testing.T) {
 	// clean leaves the canonical source alone.
 	if _, err := os.Stat(filepath.Join(dir, "locales", "en", "common.yaml")); err != nil {
 		t.Fatal("clean removed the source")
+	}
+}
+
+// A clean that was cancelled before it started removes nothing.
+func TestCleanOnACancelledContextRemovesNothing(t *testing.T) {
+	path := project(t, valid)
+	a, _, _ := testApp(t, options{configPath: path})
+
+	if err := cmdBuild(context.Background(), a); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := cmdClean(ctx, a); !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v, want context.Canceled", err)
+	}
+	if _, err := os.Stat(filepath.Join(filepath.Dir(path), "generated")); err != nil {
+		t.Fatalf("a cancelled clean removed the output: %v", err)
 	}
 }
 
@@ -52,7 +73,8 @@ func TestCleanRefusesToRemoveTheConfigDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := run(t, func() error { return cmdClean(path) })
+	a, _, _ := testApp(t, options{configPath: path})
+	err := cmdClean(context.Background(), a)
 	if err == nil {
 		t.Fatal("clean accepted its own config directory as the output")
 	}
@@ -79,7 +101,8 @@ func TestCleanRefusesAnOutputAboveTheConfigDirectory(t *testing.T) {
 
 	path := cleanProject(t, filepath.Join(dir, "i18n"), `output: ".."`)
 
-	_, err := run(t, func() error { return cmdClean(path) })
+	a, _, _ := testApp(t, options{configPath: path})
+	err := cmdClean(context.Background(), a)
 	if err == nil {
 		t.Fatal("clean accepted an output above the config directory")
 	}
@@ -96,8 +119,8 @@ func TestCleanRefusesAnAbsoluteOutputElsewhere(t *testing.T) {
 	elsewhere := t.TempDir()
 	path := cleanProject(t, t.TempDir(), fmt.Sprintf("output: %q", elsewhere))
 
-	_, err := run(t, func() error { return cmdClean(path) })
-	if err == nil {
+	a, _, _ := testApp(t, options{configPath: path})
+	if err := cmdClean(context.Background(), a); err == nil {
 		t.Fatal("clean accepted an absolute output outside the project")
 	}
 	if _, statErr := os.Stat(elsewhere); statErr != nil {
@@ -109,8 +132,8 @@ func TestCleanRefusesAnAbsoluteOutputElsewhere(t *testing.T) {
 func TestCleanRefusesAnOutputHoldingASourceRoot(t *testing.T) {
 	path := cleanProject(t, t.TempDir(), `output: "."`)
 
-	_, err := run(t, func() error { return cmdClean(path) })
-	if err == nil {
+	a, _, _ := testApp(t, options{configPath: path})
+	if err := cmdClean(context.Background(), a); err == nil {
 		t.Fatal("clean accepted an output holding the canonical root")
 	}
 	if _, statErr := os.Stat(filepath.Join(filepath.Dir(path), "locales", "en", "a.yaml")); statErr != nil {
@@ -141,9 +164,9 @@ func cleanProject(t *testing.T, dir, output string) string {
 }
 
 func TestCleanOnNothingIsFine(t *testing.T) {
-	path := project(t, valid)
+	a, _, _ := testApp(t, options{configPath: project(t, valid)})
 
-	if _, err := run(t, func() error { return cmdClean(path) }); err != nil {
+	if err := cmdClean(context.Background(), a); err != nil {
 		t.Fatalf("err = %v", err)
 	}
 }

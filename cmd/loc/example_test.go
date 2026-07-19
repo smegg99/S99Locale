@@ -49,9 +49,9 @@ func exampleConfig(t *testing.T) string {
 
 func TestExampleBuildsEveryTarget(t *testing.T) {
 	path := exampleConfig(t)
-	ctx := context.Background()
+	a, _, _ := testApp(t, options{configPath: path})
 
-	if _, err := run(t, func() error { return cmdBuild(ctx, path, false) }); err != nil {
+	if err := cmdBuild(context.Background(), a); err != nil {
 		t.Fatalf("the committed example does not build: %v", err)
 	}
 
@@ -76,9 +76,9 @@ func TestExampleBuildsEveryTarget(t *testing.T) {
 // The example output loads, not merely exists.
 func TestExampleOutputIsLoadable(t *testing.T) {
 	path := exampleConfig(t)
-	ctx := context.Background()
+	a, _, _ := testApp(t, options{configPath: path})
 
-	if _, err := run(t, func() error { return cmdBuild(ctx, path, false) }); err != nil {
+	if err := cmdBuild(context.Background(), a); err != nil {
 		t.Fatal(err)
 	}
 	generated := filepath.Join(filepath.Dir(path), "generated")
@@ -107,19 +107,21 @@ func TestExampleOutputIsLoadable(t *testing.T) {
 // A second build of the example changes nothing.
 func TestExampleSecondBuildChangesNothing(t *testing.T) {
 	path := exampleConfig(t)
+	a, out, _ := testApp(t, options{configPath: path})
 	ctx := context.Background()
 
-	if _, err := run(t, func() error { return cmdBuild(ctx, path, false) }); err != nil {
+	if err := cmdBuild(ctx, a); err != nil {
 		t.Fatal(err)
 	}
 	before := snapshot(t, filepath.Join(filepath.Dir(path), "generated"))
 
-	out, err := run(t, func() error { return cmdBuild(ctx, path, false) })
-	if err != nil {
+	// Only the second build's line counts.
+	out.Reset()
+	if err := cmdBuild(ctx, a); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out, "0 changed") {
-		t.Fatalf("the second build rewrote files:\n%s", out)
+	if !strings.Contains(out.String(), "0 changed") {
+		t.Fatalf("the second build rewrote files:\n%s", out.String())
 	}
 
 	after := snapshot(t, filepath.Join(filepath.Dir(path), "generated"))
@@ -133,7 +135,7 @@ func TestExampleSecondBuildChangesNothing(t *testing.T) {
 	}
 
 	// And check agrees the output is current.
-	if _, err := run(t, func() error { return cmdCheck(ctx, path, false, false) }); err != nil {
+	if err := cmdCheck(ctx, a, false); err != nil {
 		t.Fatalf("check on a fresh build: %v", err)
 	}
 }
@@ -141,8 +143,9 @@ func TestExampleSecondBuildChangesNothing(t *testing.T) {
 // The generated Go of the example parses.
 func TestExampleGeneratedGoParses(t *testing.T) {
 	path := exampleConfig(t)
+	a, _, _ := testApp(t, options{configPath: path})
 
-	if _, err := run(t, func() error { return cmdBuild(context.Background(), path, false) }); err != nil {
+	if err := cmdBuild(context.Background(), a); err != nil {
 		t.Fatal(err)
 	}
 
@@ -179,7 +182,8 @@ func TestExampleGeneratedGoCompiles(t *testing.T) {
 	}
 
 	path := exampleConfig(t)
-	if _, err := run(t, func() error { return cmdBuild(context.Background(), path, false) }); err != nil {
+	a, _, _ := testApp(t, options{configPath: path})
+	if err := cmdBuild(context.Background(), a); err != nil {
 		t.Fatal(err)
 	}
 

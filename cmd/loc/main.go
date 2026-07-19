@@ -20,7 +20,10 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if err := rootCmd().ExecuteContext(ctx); err != nil {
+	// stderr is the human stream and stdout the machine one, so `loc check --json` pipes cleanly.
+	a := newApp(os.Stderr, os.Stdout)
+
+	if err := rootCmd(a).ExecuteContext(ctx); err != nil {
 		// Exit 1: the check failed and the command printed why. Exit 2: loc could not run.
 		if errors.Is(err, errFailed) {
 			os.Exit(1)

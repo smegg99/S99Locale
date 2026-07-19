@@ -8,34 +8,47 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/smegg99/s99locale/internal/config"
 	"github.com/smegg99/s99locale/internal/generate"
 	"github.com/smegg99/s99locale/internal/message"
 )
 
-func cmdStats(ctx context.Context, path string) error {
-	cfg, set, err := loadAndReport(ctx, path, false)
+func newStatsCmd(a *app) *cobra.Command {
+	return &cobra.Command{
+		Use:   "stats",
+		Short: "Counts by namespace, target and locale, plus bundle sizes",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return cmdStats(cmd.Context(), a)
+		},
+	}
+}
+
+func cmdStats(ctx context.Context, a *app) error {
+	cfg, set, err := loadAndReport(ctx, a)
 	if err != nil {
 		return err
 	}
 
 	keys := set.Keys()
-	fmt.Printf("locales   %v\n", cfg.Locales)
-	fmt.Printf("messages  %d\n", len(keys))
+	a.warns("locales   %v\n", cfg.Locales)
+	a.warns("messages  %d\n", len(keys))
 
-	printByNamespace(set, keys, cfg.DefaultLocale)
-	printByTarget(cfg, set, keys)
-	printMissing(cfg, set, keys)
+	printByNamespace(a, set, keys, cfg.DefaultLocale)
+	printByTarget(a, cfg, set, keys)
+	printMissing(a, cfg, set, keys)
 
 	out, err := generate.Build(ctx, cfg, set)
 	if err != nil {
 		return err
 	}
-	printSizes(out)
+	printSizes(a, out)
 	return nil
 }
 
-func printByNamespace(set *message.Set, keys []string, base string) {
+func printByNamespace(a *app, set *message.Set, keys []string, base string) {
 	counts := map[string]int{}
 	for _, key := range keys {
 		if m, ok := set.Get(base, key); ok {
@@ -43,14 +56,14 @@ func printByNamespace(set *message.Set, keys []string, base string) {
 		}
 	}
 
-	fmt.Println("\nby namespace")
+	a.warns("\nby namespace\n")
 	for _, ns := range sortedCountKeys(counts) {
-		fmt.Printf("  %-12s %d\n", ns, counts[ns])
+		a.warns("  %-12s %d\n", ns, counts[ns])
 	}
 }
 
-func printByTarget(cfg *config.Config, set *message.Set, keys []string) {
-	fmt.Println("\nby target")
+func printByTarget(a *app, cfg *config.Config, set *message.Set, keys []string) {
+	a.warns("\nby target\n")
 	for _, target := range cfg.Targets {
 		count := 0
 		for _, key := range keys {
@@ -58,12 +71,12 @@ func printByTarget(cfg *config.Config, set *message.Set, keys []string) {
 				count++
 			}
 		}
-		fmt.Printf("  %-12s %d\n", target, count)
+		a.warns("  %-12s %d\n", target, count)
 	}
 }
 
-func printMissing(cfg *config.Config, set *message.Set, keys []string) {
-	fmt.Println("\nmissing translations")
+func printMissing(a *app, cfg *config.Config, set *message.Set, keys []string) {
+	a.warns("\nmissing translations\n")
 	for _, locale := range cfg.Locales {
 		missing := 0
 		for _, key := range keys {
@@ -71,12 +84,12 @@ func printMissing(cfg *config.Config, set *message.Set, keys []string) {
 				missing++
 			}
 		}
-		fmt.Printf("  %-12s %d\n", locale, missing)
+		a.warns("  %-12s %d\n", locale, missing)
 	}
 }
 
-func printSizes(out *generate.Outputs) {
-	fmt.Println("\ngenerated size")
+func printSizes(a *app, out *generate.Outputs) {
+	a.warns("\ngenerated size\n")
 
 	total := 0
 	byTop := map[string]int{}
@@ -86,9 +99,9 @@ func printSizes(out *generate.Outputs) {
 	}
 
 	for _, dir := range sortedCountKeys(byTop) {
-		fmt.Printf("  %-12s %s\n", dir, humanBytes(byTop[dir]))
+		a.warns("  %-12s %s\n", dir, humanBytes(byTop[dir]))
 	}
-	fmt.Printf("  %-12s %s\n", "total", humanBytes(total))
+	a.warns("  %-12s %s\n", "total", humanBytes(total))
 }
 
 func topDir(p string) string {
