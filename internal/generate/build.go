@@ -40,8 +40,8 @@ func Build(ctx context.Context, cfg *config.Config, set *message.Set) (*Outputs,
 	// The Go target may be written into the package that embeds it, which loc
 	// shares with hand-written source rather than owning outright.
 	goOut := out
-	if dir := cfg.AbsGoOutput(); dir != "" {
-		goOut = NewSharedOutput(dir, Owns)
+	if cfg.Redirected(message.TargetBackend) {
+		goOut = NewSharedOutput(cfg.AbsTargetOutput(message.TargetBackend), Owns)
 		outs.Go = goOut
 	}
 

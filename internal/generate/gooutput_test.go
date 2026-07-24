@@ -24,7 +24,8 @@ namespaces: {
 	common: {targets: ["web"]}
 	tray:   {targets: ["backend"]}
 }
-go: {package: "messages", output: "../pkg/messages"}
+outputs: {backend: "../pkg/messages"}
+go: {package: "messages"}
 `
 
 // shared builds a project whose Go target shares a package with hand-written source.

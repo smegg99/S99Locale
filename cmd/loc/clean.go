@@ -15,6 +15,7 @@ import (
 	"github.com/smegg99/s99locale/internal/config"
 	"github.com/smegg99/s99locale/internal/generate"
 	"github.com/smegg99/s99locale/internal/lock"
+	"github.com/smegg99/s99locale/internal/message"
 )
 
 func newCleanCmd(a *app) *cobra.Command {
@@ -60,7 +61,8 @@ func cmdClean(ctx context.Context, a *app) error {
 
 	// A Go target placed in the package that embeds it shares that directory
 	// with hand-written source, so only what loc owns there goes.
-	if shared := cfg.AbsGoOutput(); shared != "" {
+	if cfg.Redirected(message.TargetBackend) {
+		shared := cfg.AbsTargetOutput(message.TargetBackend)
 		removed, err := removeOwned(shared)
 		if err != nil {
 			return err

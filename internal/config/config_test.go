@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -165,5 +166,172 @@ func TestDefaultOutputLandsBesideTheConfig(t *testing.T) {
 	}
 	if got, want := cfg.AbsOutput(), filepath.Join(nested, "generated"); got != want {
 		t.Fatalf("output = %s, want %s", got, want)
+	}
+}
+
+func TestOutputsRedirectsOneTarget(t *testing.T) {
+	cfg := load(t, valid+"\noutputs: {backend: \"../backend/common/messages\"}\n")
+
+	if !cfg.Redirected(message.TargetBackend) {
+		t.Fatal("backend is not reported as redirected")
+	}
+	if cfg.Redirected(message.TargetWeb) {
+		t.Fatal("web is reported as redirected without an entry")
+	}
+
+	want := filepath.Join(filepath.Dir(cfg.Dir), "backend", "common", "messages")
+	if got := cfg.AbsTargetOutput(message.TargetBackend); got != want {
+		t.Fatalf("backend dir = %q, want %q", got, want)
+	}
+	if got, want := cfg.AbsTargetOutput(message.TargetWeb), filepath.Join(cfg.Dir, "generated", "web"); got != want {
+		t.Fatalf("web dir = %q, want %q", got, want)
+	}
+	if got := cfg.TargetLabel(message.TargetBackend); got != "../backend/common/messages" {
+		t.Fatalf("backend label = %q", got)
+	}
+}
+
+func TestAnUnknownTargetKeyInOutputsIsRejected(t *testing.T) {
+	if got := loadErr(t, valid+"\noutputs: {bakend: \"../x\"}\n"); !strings.Contains(got, "outputs.bakend") {
+		t.Fatalf("err = %q, want it to name outputs.bakend", got)
+	}
+}
+
+// `output: "."` used to be caught by clean; it has to be caught at load, or
+// the sweep is what finds the typo.
+func TestOutputMayNotBeTheConfigDirectory(t *testing.T) {
+	if got := loadErr(t, valid+"\noutput: \".\"\n"); !strings.Contains(got, "not below the config directory") {
+		t.Fatalf("err = %q", got)
+	}
+}
+
+func TestOutputMayNotBeAboveTheConfigDirectory(t *testing.T) {
+	if got := loadErr(t, valid+"\noutput: \"..\"\n"); !strings.Contains(got, "not below the config directory") {
+		t.Fatalf("err = %q", got)
+	}
+}
+
+func TestOutputMayNotBeAnAbsolutePathElsewhere(t *testing.T) {
+	body := valid + "\noutput: " + strconv.Quote(t.TempDir()) + "\n"
+	if got := loadErr(t, body); !strings.Contains(got, "not below the config directory") {
+		t.Fatalf("err = %q", got)
+	}
+}
+
+// A target directory holding a canonical root would make the removal sweep
+// point at the source it was built from.
+func TestATargetMayNotHoldACanonicalRoot(t *testing.T) {
+	body := `
+defaultLocale: "en"
+locales: ["en"]
+targets: ["web"]
+roots: ["locales"]
+outputs: {web: "."}
+`
+	if got := loadErr(t, body); !strings.Contains(got, "config directory") {
+		t.Fatalf("err = %q", got)
+	}
+}
+
+func TestTwoTargetsMayNotShareADirectory(t *testing.T) {
+	body := valid + "\noutputs: {web: \"../out\", backend: \"../out/inner\"}\n"
+	if got := loadErr(t, body); !strings.Contains(got, "both write into") {
+		t.Fatalf("err = %q", got)
+	}
+}
+
+// A redirect is acted on even for a target that is not built, and nothing
+// else checks where it points.
+func TestOutputsMayNotNameATargetThatIsNotBuilt(t *testing.T) {
+	body := `
+defaultLocale: "en"
+locales: ["en"]
+targets: ["web"]
+roots: ["locales"]
+outputs: {backend: "../x"}
+`
+	if got := loadErr(t, body); !strings.Contains(got, `outputs names "backend", which is not in targets`) {
+		t.Fatalf("err = %q", got)
+	}
+}
+
+// The default -c is relative, and an absolute entry cannot be related to a
+// relative config directory without resolving both.
+func TestARedirectToTheConfigDirectoryIsCaughtHoweverItIsSpelled(t *testing.T) {
+	for _, tc := range []struct{ name, suffix string }{
+		{"absolute", ""},
+		{"trailing slash", "/"},
+		{"through a parent", "/x/.."},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			body := `
+defaultLocale: "en"
+locales: ["en"]
+targets: ["backend"]
+roots: ["../shared/locales"]
+outputs: {backend: ` + strconv.Quote(dir+tc.suffix) + `}
+`
+			if err := os.WriteFile(filepath.Join(dir, "config.cue"), []byte(body), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			t.Chdir(dir)
+
+			_, err := config.Load("config.cue")
+			if err == nil || !strings.Contains(err.Error(), "writes into the config directory") {
+				t.Fatalf("err = %v", err)
+			}
+		})
+	}
+}
+
+// Under a relative -c, an absolute output inside the config directory is as
+// good as the relative spelling of the same directory.
+func TestAnAbsoluteOutputInsideTheConfigDirectoryLoads(t *testing.T) {
+	dir := t.TempDir()
+	body := valid + "\noutput: " + strconv.Quote(filepath.Join(dir, "generated")) + "\n"
+	if err := os.WriteFile(filepath.Join(dir, "config.cue"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(dir)
+
+	if _, err := config.Load("config.cue"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Nothing prunes the output tree's own files by name, so a root under it is
+// removed on the next build.
+func TestOutputMayNotHoldASourceRoot(t *testing.T) {
+	if got := loadErr(t, valid+"\noutput: \"i18n\"\n"); !strings.Contains(got, "holds the source root") {
+		t.Fatalf("err = %q", got)
+	}
+}
+
+func TestATargetMayNotHoldASourceRoot(t *testing.T) {
+	if got := loadErr(t, valid+"\noutputs: {backend: \"i18n\"}\n"); !strings.Contains(got, "holds the source root") {
+		t.Fatalf("err = %q", got)
+	}
+}
+
+func TestATargetMayNotHoldAScanRoot(t *testing.T) {
+	body := valid + "\nscan: [\"pkg/src\"]\noutputs: {backend: \"pkg\"}\n"
+	if got := loadErr(t, body); !strings.Contains(got, "holds the source root") {
+		t.Fatalf("err = %q", got)
+	}
+}
+
+func TestTwoTargetsMayNotShareADirectoryInEitherOrder(t *testing.T) {
+	body := valid + "\noutputs: {web: \"../out/inner\", backend: \"../out\"}\n"
+	if got := loadErr(t, body); !strings.Contains(got, "both write into") {
+		t.Fatalf("err = %q", got)
+	}
+}
+
+// The output tree's sweep would remove a redirected target's files on every
+// build, and check would then call them stale.
+func TestARedirectedTargetMayNotSitInsideTheOutputTree(t *testing.T) {
+	if got := loadErr(t, valid+"\noutputs: {backend: \"generated/pkg\"}\n"); !strings.Contains(got, "inside the output tree") {
+		t.Fatalf("err = %q", got)
 	}
 }

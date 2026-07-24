@@ -20,12 +20,14 @@ import (
 //
 // Two shapes, because go:embed cannot reach outside its own package. Under the
 // output directory the Go target sits beside the others, in `go/` and
-// `backend/`. Pointed at a consumer's package by `go.output`, the accessors sit
-// beside that package's own source and the bundle goes in `locales/`, which is
-// what the embed directive can name.
+// `backend/`. Pointed at a consumer's package by `outputs.backend`, the
+// accessors sit beside that package's own source and the bundle goes in
+// `locales/`, which is what the embed directive can name.
 type layout struct{ shared bool }
 
-func goLayout(cfg *config.Config) layout { return layout{shared: cfg.Go.Output != ""} }
+func goLayout(cfg *config.Config) layout {
+	return layout{shared: cfg.Redirected(message.TargetBackend)}
+}
 
 func (l layout) messages() string {
 	if l.shared {

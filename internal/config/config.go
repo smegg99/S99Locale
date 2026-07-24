@@ -9,6 +9,7 @@ package config
 import (
 	_ "embed"
 	"fmt"
+	"maps"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -30,20 +31,20 @@ type Namespace struct {
 
 type Go struct {
 	Package string `json:"package"`
-	Output  string `json:"output"`
 }
 
 type Config struct {
-	DefaultLocale string               `json:"defaultLocale"`
-	Locales       []string             `json:"locales"`
-	Targets       []message.Target     `json:"targets"`
-	Roots         []string             `json:"roots"`
-	Output        string               `json:"output"`
-	Namespaces    map[string]Namespace `json:"namespaces"`
-	DynamicKeys   []string             `json:"dynamicKeys"`
-	Scan          []string             `json:"scan"`
-	KeyPatterns   []string             `json:"keyPatterns"`
-	Go            Go                   `json:"go"`
+	DefaultLocale string                    `json:"defaultLocale"`
+	Locales       []string                  `json:"locales"`
+	Targets       []message.Target          `json:"targets"`
+	Roots         []string                  `json:"roots"`
+	Output        string                    `json:"output"`
+	Outputs       map[message.Target]string `json:"outputs"`
+	Namespaces    map[string]Namespace      `json:"namespaces"`
+	DynamicKeys   []string                  `json:"dynamicKeys"`
+	Scan          []string                  `json:"scan"`
+	KeyPatterns   []string                  `json:"keyPatterns"`
+	Go            Go                        `json:"go"`
 
 	// Dir is the config's directory; every relative path resolves against it.
 	Dir string `json:"-"`
@@ -109,7 +110,83 @@ func (c *Config) check() error {
 			}
 		}
 	}
+
+	// A redirect is acted on whether or not its target is built, so an unbuilt
+	// one would get a removal sweep that no guard below ever checked.
+	for _, t := range slices.Sorted(maps.Keys(c.Outputs)) {
+		if !slices.Contains(c.Targets, t) {
+			return fmt.Errorf("outputs names %q, which is not in targets %v", t, c.Targets)
+		}
+	}
+	return c.targetDirs()
+}
+
+// targetDirs rejects a layout that would make one target delete another's files, or point loc's removal sweep at a canonical source root.
+func (c *Config) targetDirs() error {
+	// `output` and `outputs` are config strings and `clean` runs unattended, so
+	// a typo has to be caught here rather than discovered afterwards.
+	base, err := filepath.Abs(c.Dir)
+	if err != nil {
+		return fmt.Errorf("resolve the config directory: %w", err)
+	}
+
+	// Compare absolute paths: filepath.Rel cannot relate a relative -c to an absolute entry.
+	resolved := *c
+	resolved.Dir = base
+	sources := append(resolved.AbsRoots(), resolved.AbsScan()...)
+
+	// loc prunes the output parent, so it must sit below the config directory.
+	out := resolved.AbsOutput()
+	if out == base || !under(base, out) {
+		return fmt.Errorf("output %q resolves to %s, which is not below the config directory", c.Output, out)
+	}
+	for _, root := range sources {
+		if under(out, root) {
+			return fmt.Errorf("output %q resolves to %s, which holds the source root %s", c.Output, out, root)
+		}
+	}
+
+	type placed struct {
+		target message.Target
+		dir    string
+	}
+	var seen []placed
+
+	for _, t := range c.Targets {
+		dir := resolved.AbsTargetOutput(t)
+
+		if dir == base {
+			return fmt.Errorf("target %q writes into the config directory", t)
+		}
+		if !c.Redirected(t) && !under(base, dir) {
+			return fmt.Errorf("target %q writes to %s, which is outside the config directory", t, dir)
+		}
+		for _, root := range sources {
+			if under(dir, root) {
+				return fmt.Errorf("target %q writes into %s, which holds the source root %s", t, dir, root)
+			}
+		}
+		// The output tree's sweep removes every file it did not generate itself.
+		if c.Redirected(t) && under(out, dir) {
+			return fmt.Errorf("target %q writes into %s, which is inside the output tree %s", t, dir, out)
+		}
+		for _, prev := range seen {
+			if under(dir, prev.dir) || under(prev.dir, dir) {
+				return fmt.Errorf("targets %q and %q both write into %s", prev.target, t, dir)
+			}
+		}
+		seen = append(seen, placed{target: t, dir: dir})
+	}
 	return nil
+}
+
+// under reports whether child is at or beneath parent.
+func under(parent, child string) bool {
+	rel, err := filepath.Rel(parent, child)
+	if err != nil {
+		return false
+	}
+	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)))
 }
 
 // AbsRoots resolves the canonical roots against the config's directory.
@@ -123,13 +200,38 @@ func (c *Config) AbsRoots() []string {
 
 func (c *Config) AbsOutput() string { return c.abs(c.Output) }
 
-// AbsGoOutput resolves where the Go target is written, or "" when it stays
-// under AbsOutput with everything else.
-func (c *Config) AbsGoOutput() string {
-	if c.Go.Output == "" {
-		return ""
+// Redirected reports whether a target has its own directory in `outputs`.
+func (c *Config) Redirected(t message.Target) bool {
+	dir, ok := c.Outputs[t]
+	return ok && dir != ""
+}
+
+// AbsTargetOutput resolves where one target's files are written.
+func (c *Config) AbsTargetOutput(t message.Target) string {
+	if c.Redirected(t) {
+		return c.abs(c.Outputs[t])
 	}
-	return c.abs(c.Go.Output)
+	return filepath.Join(c.AbsOutput(), string(t))
+}
+
+// AbsTargetOutputs resolves every configured target's directory, in Targets order.
+func (c *Config) AbsTargetOutputs() []string {
+	out := make([]string, 0, len(c.Targets))
+	for _, t := range c.Targets {
+		out = append(out, c.AbsTargetOutput(t))
+	}
+	return out
+}
+
+// TargetLabel is a target's directory as a user would type it, for messages.
+func (c *Config) TargetLabel(t message.Target) string {
+	dir := c.AbsTargetOutput(t)
+
+	rel, err := filepath.Rel(c.Dir, dir)
+	if err != nil {
+		return filepath.ToSlash(dir)
+	}
+	return filepath.ToSlash(rel)
 }
 
 // AbsScan resolves the scan roots against the config's directory.
@@ -143,7 +245,7 @@ func (c *Config) AbsScan() []string {
 
 func (c *Config) abs(p string) string {
 	if filepath.IsAbs(p) {
-		return p
+		return filepath.Clean(p)
 	}
 	return filepath.Join(c.Dir, p)
 }

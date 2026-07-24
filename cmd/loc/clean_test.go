@@ -78,7 +78,7 @@ func TestCleanRefusesToRemoveTheConfigDirectory(t *testing.T) {
 	if err == nil {
 		t.Fatal("clean accepted its own config directory as the output")
 	}
-	if !strings.Contains(err.Error(), "refusing") {
+	if !strings.Contains(err.Error(), "not below the config directory") {
 		t.Fatalf("err = %v", err)
 	}
 	if _, statErr := os.Stat(filepath.Join(dir, "locales")); statErr != nil {
@@ -106,7 +106,7 @@ func TestCleanRefusesAnOutputAboveTheConfigDirectory(t *testing.T) {
 	if err == nil {
 		t.Fatal("clean accepted an output above the config directory")
 	}
-	if !strings.Contains(err.Error(), "refusing") {
+	if !strings.Contains(err.Error(), "not below the config directory") {
 		t.Fatalf("err = %v", err)
 	}
 	if _, statErr := os.Stat(filepath.Join(sibling, "keep.txt")); statErr != nil {
