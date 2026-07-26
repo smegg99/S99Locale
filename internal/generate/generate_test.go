@@ -11,6 +11,7 @@ import (
 
 	"github.com/smegg99/s99locale/internal/config"
 	"github.com/smegg99/s99locale/internal/generate"
+	"github.com/smegg99/s99locale/internal/message"
 	"github.com/smegg99/s99locale/internal/parse"
 )
 
@@ -27,7 +28,7 @@ go: {package: "messages"}
 `
 
 // project writes a fixture and builds it, without touching disk for output.
-func project(t *testing.T, files map[string]string) (*config.Config, *generate.Output) {
+func project(t *testing.T, files map[string]string) (*config.Config, *generate.Outputs) {
 	t.Helper()
 	dir := t.TempDir()
 
@@ -62,25 +63,32 @@ func project(t *testing.T, files map[string]string) (*config.Config, *generate.O
 	if err != nil {
 		t.Fatal(err)
 	}
-	return cfg, out.Primary
+	return cfg, out
 }
 
-func file(t *testing.T, out *generate.Output, path string) []byte {
+// file finds a staged file by target and path.
+func file(t *testing.T, outs *generate.Outputs, want string) []byte {
 	t.Helper()
-	for _, f := range out.Files() {
-		if f.Path == path {
-			return f.Bytes
+
+	var have []string
+	for _, target := range []message.Target{message.TargetBackend, message.TargetWeb} {
+		out := outs.For(target)
+		if out == nil {
+			continue
+		}
+		for _, f := range out.Files() {
+			full := string(target) + "/" + f.Path
+			if full == want {
+				return f.Bytes
+			}
+			have = append(have, full)
 		}
 	}
-	var have []string
-	for _, f := range out.Files() {
-		have = append(have, f.Path)
-	}
-	t.Fatalf("no %s; have %v", path, have)
+	t.Fatalf("no %s; have %v", want, have)
 	return nil
 }
 
-func jsonFile(t *testing.T, out *generate.Output, path string) map[string]any {
+func jsonFile(t *testing.T, out *generate.Outputs, path string) map[string]any {
 	t.Helper()
 	var v map[string]any
 	if err := json.Unmarshal(file(t, out, path), &v); err != nil {
@@ -129,13 +137,13 @@ func TestTargetFiltering(t *testing.T) {
 	if _, ok := web["common"]; !ok {
 		t.Fatalf("web bundle = %v", web)
 	}
-	for _, f := range out.Files() {
-		if f.Path == "web/en/emails.json" {
+	for _, f := range out.For(message.TargetWeb).Files() {
+		if f.Path == "en/emails.json" {
 			t.Fatal("a backend-only namespace reached the web bundle")
 		}
 	}
 
-	backend := jsonFile(t, out, "backend/en.json")
+	backend := jsonFile(t, out, "backend/locales/en.json")
 	if _, ok := backend["emails.welcome"]; !ok {
 		t.Fatalf("backend bundle = %v", backend)
 	}
@@ -154,7 +162,7 @@ func TestOneMessageTwoRuntimeForms(t *testing.T) {
 		t.Fatalf("vue form = %v", got)
 	}
 
-	backend := jsonFile(t, out, "backend/en.json")
+	backend := jsonFile(t, out, "backend/locales/en.json")
 	if got := backend["emails.welcome"]; got != "Welcome, {{.Name}}" {
 		t.Fatalf("go form = %v", got)
 	}

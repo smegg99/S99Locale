@@ -18,6 +18,7 @@ type CheckResult struct {
 	Current     bool                  `json:"current"`
 	Files       int                   `json:"files"`
 	Stale       []string              `json:"stale"`
+	Modified    []string              `json:"modified"`
 	Errors      int                   `json:"errors"`
 	Warnings    int                   `json:"warnings"`
 	Diagnostics []validate.Diagnostic `json:"diagnostics"`
@@ -54,7 +55,7 @@ func cmdCheck(ctx context.Context, a *app, asJSON bool) error {
 			}
 			return err
 		}
-		return a.checkJSON(report, nil, 0, err)
+		return a.checkJSON(report, nil, nil, 0, err)
 	}
 
 	// Shared: check only reads, so two CI jobs checking at once need not queue.
@@ -69,21 +70,31 @@ func cmdCheck(ctx context.Context, a *app, asJSON bool) error {
 		return err
 	}
 
-	stale, err := out.Diff()
+	stale, modified, err := out.Diff()
 	if err != nil {
 		return err
 	}
 
 	if asJSON {
-		return a.checkJSON(report, stale, len(out.Files()), nil)
+		return a.checkJSON(report, stale, modified, len(out.Files()), nil)
 	}
 	a.printReport(report)
 
+	// Two classes because the remedy differs: `loc build` fixes a stale file but refuses one
+	// edited since or never written by loc.
+	if len(modified) > 0 {
+		a.warns("loc cannot prove it wrote these, so build will not touch them; remove them by hand:\n")
+		for _, p := range modified {
+			a.warns("  %s\n", p)
+		}
+	}
 	if len(stale) > 0 {
 		a.warns("generated output is stale; run `loc build`:\n")
 		for _, p := range stale {
 			a.warns("  %s\n", p)
 		}
+	}
+	if len(stale)+len(modified) > 0 {
 		return errFailed
 	}
 
@@ -92,17 +103,21 @@ func cmdCheck(ctx context.Context, a *app, asJSON bool) error {
 }
 
 // checkJSON writes the result to the data stream and keeps the human run's exit code.
-func (a *app) checkJSON(report *validate.Report, stale []string, files int, loadErr error) error {
+func (a *app) checkJSON(report *validate.Report, stale, modified []string, files int, loadErr error) error {
 	res := CheckResult{
-		Current:     loadErr == nil && len(stale) == 0,
+		Current:     loadErr == nil && len(stale) == 0 && len(modified) == 0,
 		Files:       files,
 		Stale:       stale,
+		Modified:    modified,
 		Errors:      len(report.Errors()),
 		Warnings:    len(report.Warnings()),
 		Diagnostics: report.Diagnostics,
 	}
 	if res.Stale == nil {
 		res.Stale = []string{}
+	}
+	if res.Modified == nil {
+		res.Modified = []string{}
 	}
 	if res.Diagnostics == nil {
 		res.Diagnostics = []validate.Diagnostic{}

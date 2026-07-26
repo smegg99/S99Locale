@@ -1,9 +1,8 @@
-// The example is a module of its own for two reasons: `loc build` writes Go in
-// here that imports go-i18n, which loc itself does not depend on, and that
-// output must stay outside `go vet ./...` at the repo root.
+// The example is a module of its own so its generated accessors, which import
+// go-i18n, stay outside `go vet ./...` at the repo root.
 //
-// Nothing is committed here to build. The dependency exists so a test can
-// compile the generated accessors and prove they are more than well-formed.
+// Its output is committed like every other generated tree, and
+// `just check-example` points the compiler at it.
 
 module example.invalid/basic
 

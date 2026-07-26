@@ -111,8 +111,7 @@ func (c *Config) check() error {
 		}
 	}
 
-	// A redirect is acted on whether or not its target is built, so an unbuilt
-	// one would get a removal sweep that no guard below ever checked.
+	// Nothing reads the redirect of a target outside targets, so naming one is an error.
 	for _, t := range slices.Sorted(maps.Keys(c.Outputs)) {
 		if !slices.Contains(c.Targets, t) {
 			return fmt.Errorf("outputs names %q, which is not in targets %v", t, c.Targets)
@@ -121,10 +120,9 @@ func (c *Config) check() error {
 	return c.targetDirs()
 }
 
-// targetDirs rejects a layout that would make one target delete another's files, or point loc's removal sweep at a canonical source root.
+// targetDirs rejects targets that share a directory or hold a canonical source root.
 func (c *Config) targetDirs() error {
-	// `output` and `outputs` are config strings and `clean` runs unattended, so
-	// a typo has to be caught here rather than discovered afterwards.
+	// clean runs unattended, so a bad output path is rejected here.
 	base, err := filepath.Abs(c.Dir)
 	if err != nil {
 		return fmt.Errorf("resolve the config directory: %w", err)
@@ -137,11 +135,11 @@ func (c *Config) targetDirs() error {
 
 	// loc prunes the output parent, so it must sit below the config directory.
 	out := resolved.AbsOutput()
-	if out == base || !under(base, out) {
+	if out == base || !Under(base, out) {
 		return fmt.Errorf("output %q resolves to %s, which is not below the config directory", c.Output, out)
 	}
 	for _, root := range sources {
-		if under(out, root) {
+		if Under(out, root) {
 			return fmt.Errorf("output %q resolves to %s, which holds the source root %s", c.Output, out, root)
 		}
 	}
@@ -158,20 +156,21 @@ func (c *Config) targetDirs() error {
 		if dir == base {
 			return fmt.Errorf("target %q writes into the config directory", t)
 		}
-		if !c.Redirected(t) && !under(base, dir) {
+		if !c.Redirected(t) && !Under(base, dir) {
 			return fmt.Errorf("target %q writes to %s, which is outside the config directory", t, dir)
 		}
 		for _, root := range sources {
-			if under(dir, root) {
+			if Under(dir, root) {
 				return fmt.Errorf("target %q writes into %s, which holds the source root %s", t, dir, root)
 			}
 		}
-		// The output tree's sweep removes every file it did not generate itself.
-		if c.Redirected(t) && under(out, dir) {
+		// `loc clean` removes the output tree whole, which would take a redirected
+		// target inside it along with it.
+		if c.Redirected(t) && Under(out, dir) {
 			return fmt.Errorf("target %q writes into %s, which is inside the output tree %s", t, dir, out)
 		}
 		for _, prev := range seen {
-			if under(dir, prev.dir) || under(prev.dir, dir) {
+			if Under(dir, prev.dir) || Under(prev.dir, dir) {
 				return fmt.Errorf("targets %q and %q both write into %s", prev.target, t, dir)
 			}
 		}
@@ -180,8 +179,8 @@ func (c *Config) targetDirs() error {
 	return nil
 }
 
-// under reports whether child is at or beneath parent.
-func under(parent, child string) bool {
+// Under reports whether child is at or beneath parent.
+func Under(parent, child string) bool {
 	rel, err := filepath.Rel(parent, child)
 	if err != nil {
 		return false

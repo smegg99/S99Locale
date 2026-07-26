@@ -28,7 +28,7 @@ const (
 // two cannot drift apart. Which band a count lands in comes from
 // Intl.PluralRules, not from a rule written here: go-i18n selects by CLDR, so
 // anything else would make the browser and the backend disagree.
-func Plurals(out *Output, cfg *config.Config, target message.Target) error {
+func Plurals(out *Output, cfg *config.Config) error {
 	var b strings.Builder
 
 	b.WriteString(tsHeader)
@@ -48,7 +48,7 @@ func Plurals(out *Output, cfg *config.Config, target message.Target) error {
 	}
 	b.WriteString("}\n")
 
-	out.Add(fmt.Sprintf("%s/%s", target, pluralsFileName), []byte(b.String()))
+	out.Add(pluralsFileName, []byte(b.String()))
 	return nil
 }
 
@@ -112,14 +112,14 @@ func quotedCategories(rule plural.Rule) string {
 }
 
 // Keys writes the locale list and the default locale a frontend imports.
-func Keys(out *Output, cfg *config.Config, target message.Target) error {
+func Keys(out *Output, cfg *config.Config) error {
 	var b strings.Builder
 	b.WriteString(tsHeader)
 
 	fmt.Fprintf(&b, "export const locales = %s as const\n", jsonArray(cfg.Locales))
 	fmt.Fprintf(&b, "export const defaultLocale = '%s'\n", cfg.DefaultLocale)
 
-	out.Add(fmt.Sprintf("%s/%s", target, keysFileName), []byte(b.String()))
+	out.Add(keysFileName, []byte(b.String()))
 	return nil
 }
 

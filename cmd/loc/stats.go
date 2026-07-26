@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -44,7 +43,7 @@ func cmdStats(ctx context.Context, a *app) error {
 	if err != nil {
 		return err
 	}
-	printSizes(a, out)
+	printSizes(a, cfg, out)
 	return nil
 }
 
@@ -88,27 +87,20 @@ func printMissing(a *app, cfg *config.Config, set *message.Set, keys []string) {
 	}
 }
 
-func printSizes(a *app, out *generate.Outputs) {
+// printSizes has one row per target, because each target is its own tree.
+func printSizes(a *app, cfg *config.Config, out *generate.Outputs) {
 	a.warns("\ngenerated size\n")
 
 	total := 0
-	byTop := map[string]int{}
-	for _, f := range out.Files() {
-		total += len(f.Bytes)
-		byTop[topDir(f.Path)] += len(f.Bytes)
-	}
-
-	for _, dir := range sortedCountKeys(byTop) {
-		a.warns("  %-12s %s\n", dir, humanBytes(byTop[dir]))
+	for _, target := range cfg.Targets {
+		size := 0
+		for _, f := range out.For(target).Files() {
+			size += len(f.Bytes)
+		}
+		total += size
+		a.warns("  %-12s %s\n", target, humanBytes(size))
 	}
 	a.warns("  %-12s %s\n", "total", humanBytes(total))
-}
-
-func topDir(p string) string {
-	if i := strings.IndexByte(p, '/'); i >= 0 {
-		return p[:i]
-	}
-	return "."
 }
 
 func humanBytes(n int) string {

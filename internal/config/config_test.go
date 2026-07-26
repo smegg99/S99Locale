@@ -197,8 +197,8 @@ func TestAnUnknownTargetKeyInOutputsIsRejected(t *testing.T) {
 	}
 }
 
-// `output: "."` used to be caught by clean; it has to be caught at load, or
-// the sweep is what finds the typo.
+// `output: "."` would make the config directory the tree `loc clean` removes
+// whole, so it is refused at load, before any command runs.
 func TestOutputMayNotBeTheConfigDirectory(t *testing.T) {
 	if got := loadErr(t, valid+"\noutput: \".\"\n"); !strings.Contains(got, "not below the config directory") {
 		t.Fatalf("err = %q", got)
@@ -218,8 +218,7 @@ func TestOutputMayNotBeAnAbsolutePathElsewhere(t *testing.T) {
 	}
 }
 
-// A target directory holding a canonical root would make the removal sweep
-// point at the source it was built from.
+// A target directory holding a canonical root would mix generated files into the source.
 func TestATargetMayNotHoldACanonicalRoot(t *testing.T) {
 	body := `
 defaultLocale: "en"
@@ -300,8 +299,8 @@ func TestAnAbsoluteOutputInsideTheConfigDirectoryLoads(t *testing.T) {
 	}
 }
 
-// Nothing prunes the output tree's own files by name, so a root under it is
-// removed on the next build.
+// `loc clean` removes the output tree whole, so a root under it would go with
+// it.
 func TestOutputMayNotHoldASourceRoot(t *testing.T) {
 	if got := loadErr(t, valid+"\noutput: \"i18n\"\n"); !strings.Contains(got, "holds the source root") {
 		t.Fatalf("err = %q", got)
@@ -328,8 +327,8 @@ func TestTwoTargetsMayNotShareADirectoryInEitherOrder(t *testing.T) {
 	}
 }
 
-// The output tree's sweep would remove a redirected target's files on every
-// build, and check would then call them stale.
+// `loc clean` removes the output tree whole, so a redirected target inside it
+// would lose its files, and any source beside them, with it.
 func TestARedirectedTargetMayNotSitInsideTheOutputTree(t *testing.T) {
 	if got := loadErr(t, valid+"\noutputs: {backend: \"generated/pkg\"}\n"); !strings.Contains(got, "inside the output tree") {
 		t.Fatalf("err = %q", got)

@@ -19,7 +19,7 @@ reeds:
     count: {type: integer}
 `
 
-func pluralProject(t *testing.T) *generate.Output {
+func pluralProject(t *testing.T) *generate.Outputs {
 	t.Helper()
 	en := `      one: "{count} reed"
       other: "{count} reeds"`
@@ -80,7 +80,7 @@ func TestGeneratedPluralsFileCoversEveryLocale(t *testing.T) {
 
 func TestGoCodeIsTyped(t *testing.T) {
 	out := pluralProject(t)
-	src := string(file(t, out, "go/messages_gen.go"))
+	src := string(file(t, out, "backend/messages_gen.go"))
 
 	if !strings.Contains(src, "type TunerReedsParams struct") {
 		t.Fatalf("no typed params:\n%s", src)

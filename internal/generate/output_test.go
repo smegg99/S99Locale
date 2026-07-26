@@ -14,6 +14,7 @@ import (
 
 	"github.com/smegg99/s99locale/internal/config"
 	"github.com/smegg99/s99locale/internal/generate"
+	"github.com/smegg99/s99locale/internal/message"
 	"github.com/smegg99/s99locale/internal/parse"
 )
 
@@ -41,7 +42,7 @@ func TestManifestHasNoTimestamp(t *testing.T) {
 	_, out := project(t, fixture)
 
 	var man map[string]any
-	if err := json.Unmarshal(file(t, out, "manifest.json"), &man); err != nil {
+	if err := json.Unmarshal(file(t, out, "web/loc-manifest.json"), &man); err != nil {
 		t.Fatal(err)
 	}
 	for _, banned := range []string{"generatedAt", "timestamp", "date", "time"} {
@@ -52,10 +53,10 @@ func TestManifestHasNoTimestamp(t *testing.T) {
 	if man["sourceHash"] == "" {
 		t.Fatal("no source hash")
 	}
-
-	targets := man["targets"].(map[string]any)
-	web := targets["web"].(map[string]any)
-	if got := web["namespaces"].([]any); len(got) != 1 || got[0] != "common" {
+	if man["target"] != "web" {
+		t.Fatalf("target = %v", man["target"])
+	}
+	if got := man["namespaces"].([]any); len(got) != 1 || got[0] != "common" {
 		t.Fatalf("web namespaces = %v", got)
 	}
 }
@@ -81,16 +82,16 @@ func TestWriteIsAtomicAndSkipsUnchanged(t *testing.T) {
 		t.Fatalf("rewrote %d unchanged file(s)", again)
 	}
 
-	stale, err := out.Diff()
+	stale, modified, err := out.Diff()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(stale) != 0 {
-		t.Fatalf("check reported %v stale right after a build", stale)
+	if len(stale)+len(modified) != 0 {
+		t.Fatalf("check reported %v stale and %v modified right after a build", stale, modified)
 	}
 
 	// No temp files left behind.
-	entries, err := os.ReadDir(filepath.Join(out.Dir, "web", "en"))
+	entries, err := os.ReadDir(filepath.Join(out.For(message.TargetWeb).Dir, "en"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,16 +108,20 @@ func TestDiffDetectsAnEditedFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	target := filepath.Join(out.Dir, "web", "en", "common.json")
+	web := out.For(message.TargetWeb)
+	target := filepath.Join(web.Dir, "en", "common.json")
 	if err := os.WriteFile(target, []byte(`{"tampered":true}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	stale, err := out.Diff()
+	stale, modified, err := out.Diff()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Contains(stale, "web/en/common.json") {
+	if len(modified) != 0 {
+		t.Fatalf("modified = %v; an edited file loc still produces is stale, not modified", modified)
+	}
+	if !slices.Contains(stale, "generated/web/en/common.json") {
 		t.Fatalf("stale = %v", stale)
 	}
 }
@@ -163,7 +168,7 @@ x:
 func TestGeneratedGoIsGofmtStable(t *testing.T) {
 	out := pluralProject(t)
 
-	for _, path := range []string{"go/messages_gen.go", "go/keys_gen.go"} {
+	for _, path := range []string{"backend/messages_gen.go", "backend/keys_gen.go"} {
 		src := file(t, out, path)
 		formatted, err := format.Source(src)
 		if err != nil {
@@ -177,49 +182,51 @@ func TestGeneratedGoIsGofmtStable(t *testing.T) {
 
 // Dropping a locale removes its recorded files and directory.
 func TestWriteRemovesOutputItNoLongerProduces(t *testing.T) {
-	_, out := project(t, fixture)
+	cfg, out := project(t, fixture)
 	if _, _, err := out.Write(); err != nil {
 		t.Fatal(err)
 	}
 
-	orphanDir := filepath.Join(out.Dir, "web", "de")
-	if err := os.MkdirAll(orphanDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	orphan := filepath.Join(orphanDir, "common.json")
-	if err := os.WriteFile(orphan, []byte(`{"common":{"ok":"[Ök··]"}}`), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	// Drop pl, so what the last build wrote for it is an orphan its record names.
+	narrowed := reload(t, cfg, `locales: ["en", "pl"]`, `locales: ["en"]`)
+	next := rebuild(t, narrowed)
+	orphans := []string{"generated/backend/locales/pl.json", "generated/web/pl/common.json"}
 
-	stale, err := out.Diff()
+	stale, modified, err := next.Diff()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(stale) != 1 || stale[0] != filepath.Join("web", "de", "common.json") {
-		t.Fatalf("check did not report the orphan: %v", stale)
+	if len(modified) != 0 {
+		t.Fatalf("modified = %v, want nothing: nobody edited a file", modified)
+	}
+	for _, want := range orphans {
+		if !slices.Contains(stale, want) {
+			t.Fatalf("check did not report the orphan %s: %v", want, stale)
+		}
 	}
 
-	_, removed, err := out.Write()
+	_, removed, err := next.Write()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(removed) != 1 || removed[0] != filepath.Join("web", "de", "common.json") {
-		t.Fatalf("removed = %v, want exactly web/de/common.json", removed)
+	if !slices.Equal(removed, orphans) {
+		t.Fatalf("removed = %v, want exactly %v", removed, orphans)
 	}
-	if _, err := os.Stat(orphan); !os.IsNotExist(err) {
+	web := next.For(message.TargetWeb).Dir
+	if _, err := os.Stat(filepath.Join(web, "pl", "common.json")); !os.IsNotExist(err) {
 		t.Fatalf("orphan survived the build: %v", err)
 	}
 	// The directory goes too, or a glob still matches an empty locale.
-	if _, err := os.Stat(orphanDir); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(web, "pl")); !os.IsNotExist(err) {
 		t.Fatalf("empty directory survived the build: %v", err)
 	}
 
 	// Everything the build does produce is still there.
-	stale, err = out.Diff()
+	stale, modified, err = next.Diff()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(stale) != 0 {
-		t.Fatalf("build left %v stale", stale)
+	if len(stale)+len(modified) != 0 {
+		t.Fatalf("build left %v stale and %v modified", stale, modified)
 	}
 }

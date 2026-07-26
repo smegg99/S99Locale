@@ -8,14 +8,10 @@ import (
 	"path/filepath"
 )
 
-// tempPrefix marks a file that a build is still staging. Nothing outside a
-// build's own commit phase may treat one as output - the orphan sweep skips
-// them, or a concurrent run's sweep would delete a file mid-write.
+// tempPrefix marks a file still being staged; no record names one, so no sweep removes it.
 const tempPrefix = ".loc-"
 
-// fileSystem is what Write commits through, so a test can fail a write on
-// demand. Reads stay on os directly: the read path has no failure worth
-// injecting.
+// fileSystem is what Write commits through, so a test can fail a write. Reads use os directly.
 type fileSystem interface {
 	MkdirAll(path string) error
 	// WriteTemp writes body beside its destination with the final mode and

@@ -1,0 +1,1 @@
+{"emails.digest.subject":{"few":"{{.Count}} nowe wiadomości","many":"{{.Count}} nowych wiadomości","one":"1 nowa wiadomość","other":"{{.Count}} nowej wiadomości"},"emails.welcome.body":"Cześć {{.Name}}, Twoje konto jest gotowe.","emails.welcome.subject":"Witamy w {{.Product}}"}

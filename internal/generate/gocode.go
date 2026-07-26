@@ -41,7 +41,7 @@ func GoCode(out *Output, cfg *config.Config, set *message.Set) error {
 	if err != nil {
 		return err
 	}
-	out.Add(goLayout(cfg).messages(), src)
+	out.Add("messages_gen.go", src)
 
 	return keysFile(out, cfg, msgs, names)
 }
@@ -68,7 +68,7 @@ func keysFile(out *Output, cfg *config.Config, msgs []*message.Message, names ma
 	if err != nil {
 		return err
 	}
-	out.Add(goLayout(cfg).keys(), src)
+	out.Add("keys_gen.go", src)
 	return nil
 }
 

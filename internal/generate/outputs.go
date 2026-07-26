@@ -3,23 +3,35 @@
 package generate
 
 import (
-	"path/filepath"
 	"sort"
+
+	"github.com/smegg99/s99locale/internal/message"
 )
 
-// Outputs is a build's staged trees. There is normally one; a config that
-// places the Go target in the package that embeds it has a second, which loc
-// shares with that package's own source.
+// Outputs is one staged tree per configured target, plus the retired trees to clear.
 type Outputs struct {
-	Primary *Output
-	Go      *Output
+	byTarget map[message.Target]*Output
+	order    []message.Target
+	// retired trees stage nothing, so writing one clears what its record names.
+	retired []*Output
 }
 
+func newOutputs() *Outputs { return &Outputs{byTarget: map[message.Target]*Output{}} }
+
+func (o *Outputs) add(out *Output) {
+	o.byTarget[out.Target] = out
+	o.order = append(o.order, out.Target)
+}
+
+// For is one target's tree, or nil when the config does not build that target.
+func (o *Outputs) For(t message.Target) *Output { return o.byTarget[t] }
+
 func (o *Outputs) all() []*Output {
-	if o.Go == nil {
-		return []*Output{o.Primary}
+	out := make([]*Output, 0, len(o.order)+len(o.retired))
+	for _, t := range o.order {
+		out = append(out, o.byTarget[t])
 	}
-	return []*Output{o.Primary, o.Go}
+	return append(out, o.retired...)
 }
 
 // Files is every staged file across every tree.
@@ -31,20 +43,31 @@ func (o *Outputs) Files() []File {
 	return out
 }
 
-// Write commits every tree. A failure leaves the trees already written in
-// place: they are each atomic on their own, and the caller is told which step
-// failed rather than left with a half-reverted build.
+// Write refuses if any tree holds a file loc did not provably write, then commits each tree.
 func (o *Outputs) Write() (written int, removed []string, err error) {
-	for _, one := range o.all() {
-		w, r, err := one.Write()
-		written += w
-		for _, rel := range r {
-			if one == o.Primary {
-				removed = append(removed, rel)
-				continue
-			}
-			removed = append(removed, filepath.Join(one.Dir, rel))
+	trees := o.all()
+	plans := make([]plan, len(trees))
+	var edited, foreign []string
+	for i, one := range trees {
+		p, err := one.plan()
+		if err != nil {
+			return 0, nil, err
 		}
+		plans[i] = p
+		edited = append(edited, p.edited...)
+		foreign = append(foreign, p.foreign...)
+	}
+	sort.Strings(edited)
+	sort.Strings(foreign)
+	if err := refusal(edited, foreign); err != nil {
+		return 0, nil, err
+	}
+
+	// Each tree is atomic on its own; a later failure leaves earlier trees written.
+	for i, one := range trees {
+		w, r, err := one.commit(plans[i])
+		written += w
+		removed = append(removed, r...)
 		if err != nil {
 			return written, removed, err
 		}
@@ -53,23 +76,17 @@ func (o *Outputs) Write() (written int, removed []string, err error) {
 	return written, removed, nil
 }
 
-// Diff reports every stale path across every tree. A second tree's paths carry
-// its directory, so a report names a file somebody can open.
-func (o *Outputs) Diff() ([]string, error) {
-	var stale []string
+// Diff reports every stale and hand-edited path across every tree, relative to the config.
+func (o *Outputs) Diff() (stale, modified []string, err error) {
 	for _, one := range o.all() {
-		found, err := one.Diff()
+		s, m, err := one.Diff()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		for _, rel := range found {
-			if one == o.Primary {
-				stale = append(stale, rel)
-				continue
-			}
-			stale = append(stale, filepath.Join(one.Dir, rel))
-		}
+		stale = append(stale, s...)
+		modified = append(modified, m...)
 	}
 	sort.Strings(stale)
-	return stale, nil
+	sort.Strings(modified)
+	return stale, modified, nil
 }

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -118,10 +119,121 @@ func TestQuietCheckStillSaysWhatIsStale(t *testing.T) {
 	if err := cmdCheck(ctx, a, false); !errors.Is(err, errFailed) {
 		t.Fatalf("err = %v, want a failure", err)
 	}
-	for _, want := range []string{"generated output is stale", "  web/pl/common.json\n"} {
+	for _, want := range []string{"generated output is stale", "  generated/web/pl/common.json\n"} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("--quiet hid %q:\n%s", want, out.String())
 		}
+	}
+}
+
+// A quiet check names a hand-edited orphan, and build refuses to remove it.
+func TestQuietCheckStillSaysWhatWasModified(t *testing.T) {
+	path := project(t, valid)
+	a, out, _ := testApp(t, options{configPath: path, quiet: true})
+	ctx := context.Background()
+
+	if err := cmdBuild(ctx, a); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Dir(path)
+	edited := filepath.Join(dir, "generated", "web", "pl", "common.json")
+	if err := os.WriteFile(edited, []byte(`{"mine":"now"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// Dropping pl leaves the edited file as an orphan the record names.
+	body := strings.Replace(cliConfig, `locales: ["en", "pl"]`, `locales: ["en"]`, 1)
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := cmdCheck(ctx, a, false); !errors.Is(err, errFailed) {
+		t.Fatalf("err = %v, want a failure", err)
+	}
+	for _, want := range []string{"loc cannot prove it wrote these, so build will not touch them; remove them by hand:\n  generated/web/pl/common.json\n"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("--quiet hid %q:\n%s", want, out.String())
+		}
+	}
+
+	err := cmdBuild(ctx, a)
+	if err == nil || !strings.Contains(err.Error(), "modified since loc wrote it") {
+		t.Fatalf("build on an edited orphan = %v, want a refusal", err)
+	}
+	if _, statErr := os.Stat(edited); statErr != nil {
+		t.Fatal("build removed the edited file anyway")
+	}
+}
+
+// check --json names a hand-edited orphan in its own field, and is not current.
+func TestCheckJSONNamesWhatWasModified(t *testing.T) {
+	path := project(t, valid)
+	a, _, data := testApp(t, options{configPath: path})
+	ctx := context.Background()
+
+	if err := cmdBuild(ctx, a); err != nil {
+		t.Fatal(err)
+	}
+	edited := filepath.Join(filepath.Dir(path), "generated", "web", "pl", "common.json")
+	if err := os.WriteFile(edited, []byte(`{"mine":"now"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	body := strings.Replace(cliConfig, `locales: ["en", "pl"]`, `locales: ["en"]`, 1)
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := cmdCheck(ctx, a, true); !errors.Is(err, errFailed) {
+		t.Fatalf("err = %v, want a failure", err)
+	}
+	var res CheckResult
+	if err := json.Unmarshal(data.Bytes(), &res); err != nil {
+		t.Fatalf("output is not JSON: %v\n%s", err, data.String())
+	}
+	if res.Current {
+		t.Fatal("current = true with a modified file")
+	}
+	if len(res.Modified) != 1 || res.Modified[0] != "generated/web/pl/common.json" {
+		t.Fatalf("modified = %v, want [generated/web/pl/common.json]", res.Modified)
+	}
+	if slices.Contains(res.Stale, "generated/web/pl/common.json") {
+		t.Fatalf("stale = %v also names the modified file", res.Stale)
+	}
+}
+
+// A build that fails after writing one tree still reports its removals, even under --quiet.
+func TestAFailedBuildSaysWhatItRemoved(t *testing.T) {
+	path := project(t, valid)
+	both := strings.Replace(cliConfig, `targets: ["web"]`, `targets: ["web", "backend"]`, 1)
+	if err := os.WriteFile(path, []byte(both), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	a, out, _ := testApp(t, options{configPath: path, quiet: true})
+	ctx := context.Background()
+	if err := cmdBuild(ctx, a); err != nil {
+		t.Fatal(err)
+	}
+
+	// web is written first; an unwritable backend directory fails the second tree.
+	backend := filepath.Join(filepath.Dir(path), "generated", "backend")
+	if err := os.Chmod(backend, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(backend, 0o755) })
+	if probe, err := os.CreateTemp(backend, "probe"); err == nil {
+		probe.Close()
+		os.Remove(probe.Name())
+		t.Skip("a read-only directory is still writable here")
+	}
+
+	narrowed := strings.Replace(both, `locales: ["en", "pl"]`, `locales: ["en"]`, 1)
+	if err := os.WriteFile(path, []byte(narrowed), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdBuild(ctx, a); err == nil {
+		t.Fatal("build into a read-only tree succeeded")
+	}
+	if want := "loc: removed generated/web/pl/common.json\n"; !strings.Contains(out.String(), want) {
+		t.Fatalf("the failed build hid %q:\n%s", want, out.String())
 	}
 }
 
@@ -209,6 +321,23 @@ func TestStatsReportsWhatIsThere(t *testing.T) {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("stats missing %q:\n%s", want, out.String())
 		}
+	}
+}
+
+// Each target writes its own tree, so the size table has one row per target.
+func TestStatsSizesEachTarget(t *testing.T) {
+	a, out, _ := testApp(t, options{configPath: project(t, valid)})
+
+	if err := cmdStats(context.Background(), a); err != nil {
+		t.Fatal(err)
+	}
+	_, sizes, ok := strings.Cut(out.String(), "generated size\n")
+	if !ok {
+		t.Fatalf("no size table:\n%s", out.String())
+	}
+	rows := strings.Split(strings.TrimSpace(sizes), "\n")
+	if len(rows) != 2 || !strings.HasPrefix(strings.TrimSpace(rows[0]), "web ") || !strings.HasPrefix(strings.TrimSpace(rows[1]), "total ") {
+		t.Fatalf("size rows = %q, want web then total", rows)
 	}
 }
 

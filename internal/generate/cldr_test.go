@@ -69,7 +69,7 @@ func TestGeneratedIndexAgreesWithCLDRForEveryLocale(t *testing.T) {
 }
 
 // localesProject builds a project with one plural per locale, each form named after its category.
-func localesProject(t *testing.T, locales []string) *generate.Output {
+func localesProject(t *testing.T, locales []string) *generate.Outputs {
 	t.Helper()
 	dir := t.TempDir()
 
@@ -113,11 +113,11 @@ func localesProject(t *testing.T, locales []string) *generate.Output {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return out.Primary
+	return out
 }
 
 // casesJSON takes each pipe string from the generated bundle, so the shipped band order is tested.
-func casesJSON(t *testing.T, out *generate.Output, locales []string) string {
+func casesJSON(t *testing.T, out *generate.Outputs, locales []string) string {
 	t.Helper()
 
 	var b strings.Builder

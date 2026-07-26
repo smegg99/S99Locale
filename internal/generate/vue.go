@@ -18,9 +18,7 @@ import (
 // Placeholders pass through untouched: canonical {name} is already vue-i18n's
 // syntax. Plurals become a pipe string whose band order only the generated
 // index function knows.
-func Vue(out *Output, cfg *config.Config, set *message.Set, target message.Target) error {
-	dir := string(target)
-
+func Vue(out *Output, cfg *config.Config, set *message.Set) error {
 	for _, locale := range cfg.Locales {
 		rule, err := plural.For(locale)
 		if err != nil {
@@ -31,7 +29,7 @@ func Vue(out *Output, cfg *config.Config, set *message.Set, target message.Targe
 
 		for _, key := range set.Keys() {
 			m, ok := set.Get(locale, key)
-			if !ok || !cfg.Wants(m, target) {
+			if !ok || !cfg.Wants(m, out.Target) {
 				continue
 			}
 
@@ -50,7 +48,7 @@ func Vue(out *Output, cfg *config.Config, set *message.Set, target message.Targe
 		}
 
 		for _, ns := range sortedNamespaces(byNamespace) {
-			rel := fmt.Sprintf("%s/%s/%s.json", dir, locale, ns)
+			rel := fmt.Sprintf("%s/%s.json", locale, ns)
 			if err := out.AddJSON(rel, byNamespace[ns]); err != nil {
 				return err
 			}

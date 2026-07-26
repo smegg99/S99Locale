@@ -45,6 +45,10 @@ func cmdBuild(ctx context.Context, a *app) error {
 
 	written, removed, err := out.Write()
 	if err != nil {
+		// Trees written before the failure stay written, so their removals are reported with the error.
+		for _, name := range removed {
+			a.warns("loc: removed %s\n", name)
+		}
 		return err
 	}
 

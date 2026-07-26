@@ -12,10 +12,22 @@ import (
 	"testing"
 )
 
-// Builds the committed example end to end: every target, loadable output, and
-// a second build that changes nothing.
-
+// exampleConfig copies the example without its generated output, so a build writes every file.
 func exampleConfig(t *testing.T) string {
+	t.Helper()
+
+	path := exampleCopy(t)
+	example := filepath.Dir(filepath.Dir(path))
+	for _, generated := range []string{filepath.Join("i18n", "generated"), "messages"} {
+		if err := os.RemoveAll(filepath.Join(example, generated)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return path
+}
+
+// exampleCopy is a copy of the example as committed, generated output included.
+func exampleCopy(t *testing.T) string {
 	t.Helper()
 
 	// Copied out, so a test never writes into the committed example.
@@ -47,27 +59,40 @@ func exampleConfig(t *testing.T) string {
 	return filepath.Join(dir, "i18n", "config.cue")
 }
 
+// The committed output is what a build of the committed sources writes, byte for byte.
+func TestExampleCommittedOutputIsCurrent(t *testing.T) {
+	a, out, _ := testApp(t, options{configPath: exampleCopy(t)})
+
+	if err := cmdCheck(context.Background(), a, false); err != nil {
+		t.Fatalf("the committed example output is not current: %v\n%s", err, out.String())
+	}
+}
+
 func TestExampleBuildsEveryTarget(t *testing.T) {
 	path := exampleConfig(t)
-	a, _, _ := testApp(t, options{configPath: path})
+	a, out, _ := testApp(t, options{configPath: path})
 
 	if err := cmdBuild(context.Background(), a); err != nil {
 		t.Fatalf("the committed example does not build: %v", err)
 	}
+	if want := "loc: 10 file(s) generated, 10 changed\n"; out.String() != want {
+		t.Fatalf("build said %q, want %q", out.String(), want)
+	}
 
-	generated := filepath.Join(filepath.Dir(path), "generated")
+	cfgDir := filepath.Dir(path)
 	for _, want := range []string{
-		"backend/en.json",
-		"backend/pl.json",
-		"web/en/app.json",
-		"web/pl/app.json",
-		"web/keys.gen.ts",
-		"web/plurals.gen.ts",
-		"go/messages_gen.go",
-		"go/keys_gen.go",
-		"manifest.json",
+		"generated/web/en/app.json",
+		"generated/web/pl/app.json",
+		"generated/web/keys.gen.ts",
+		"generated/web/plurals.gen.ts",
+		"generated/web/loc-manifest.json",
+		"../messages/locales/en.json",
+		"../messages/locales/pl.json",
+		"../messages/messages_gen.go",
+		"../messages/keys_gen.go",
+		"../messages/loc-manifest.json",
 	} {
-		if _, err := os.Stat(filepath.Join(generated, want)); err != nil {
+		if _, err := os.Stat(filepath.Join(cfgDir, filepath.FromSlash(want))); err != nil {
 			t.Errorf("missing %s", want)
 		}
 	}
@@ -81,9 +106,9 @@ func TestExampleOutputIsLoadable(t *testing.T) {
 	if err := cmdBuild(context.Background(), a); err != nil {
 		t.Fatal(err)
 	}
-	generated := filepath.Join(filepath.Dir(path), "generated")
+	cfgDir := filepath.Dir(path)
 
-	web := readJSON(t, filepath.Join(generated, "web", "pl", "app.json"))
+	web := readJSON(t, filepath.Join(cfgDir, "generated", "web", "pl", "app.json"))
 	app, _ := web["app"].(map[string]any)
 	if app["greeting"] != "Cześć {name}" {
 		t.Fatalf("vue greeting = %v", app["greeting"])
@@ -94,7 +119,7 @@ func TestExampleOutputIsLoadable(t *testing.T) {
 		t.Fatalf("%d separators in %q, want 3", n, files)
 	}
 
-	backend := readJSON(t, filepath.Join(generated, "backend", "pl.json"))
+	backend := readJSON(t, filepath.Join(cfgDir, "..", "messages", "locales", "pl.json"))
 	if backend["emails.welcome.subject"] != "Witamy w {{.Product}}" {
 		t.Fatalf("go form = %v", backend["emails.welcome.subject"])
 	}
@@ -113,7 +138,9 @@ func TestExampleSecondBuildChangesNothing(t *testing.T) {
 	if err := cmdBuild(ctx, a); err != nil {
 		t.Fatal(err)
 	}
-	before := snapshot(t, filepath.Join(filepath.Dir(path), "generated"))
+	// The whole example copy, so both the web tree and the Go package are covered.
+	example := filepath.Dir(filepath.Dir(path))
+	before := snapshot(t, example)
 
 	// Only the second build's line counts.
 	out.Reset()
@@ -124,7 +151,7 @@ func TestExampleSecondBuildChangesNothing(t *testing.T) {
 		t.Fatalf("the second build rewrote files:\n%s", out.String())
 	}
 
-	after := snapshot(t, filepath.Join(filepath.Dir(path), "generated"))
+	after := snapshot(t, example)
 	for name, body := range before {
 		if after[name] != body {
 			t.Errorf("%s differs between builds", name)
@@ -149,7 +176,7 @@ func TestExampleGeneratedGoParses(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	src, err := os.ReadFile(filepath.Join(filepath.Dir(path), "generated", "go", "messages_gen.go"))
+	src, err := os.ReadFile(filepath.Join(filepath.Dir(path), "..", "messages", "messages_gen.go"))
 	if err != nil {
 		t.Fatal(err)
 	}

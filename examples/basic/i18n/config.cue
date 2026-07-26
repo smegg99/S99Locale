@@ -5,7 +5,9 @@ locales: ["en", "pl"]
 targets: ["web", "backend"]
 
 roots: ["locales"]
-output: "generated"
+
+// The Go accessors go into the example module itself, so the compiler checks them.
+outputs: {backend: "../messages"}
 
 namespaces: {
 	// Shown by Vue, never rendered by Go.

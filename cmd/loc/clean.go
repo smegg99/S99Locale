@@ -7,15 +7,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/smegg99/s99locale/internal/config"
-	"github.com/smegg99/s99locale/internal/generate"
 	"github.com/smegg99/s99locale/internal/lock"
-	"github.com/smegg99/s99locale/internal/message"
 )
 
 func newCleanCmd(a *app) *cobra.Command {
@@ -58,59 +55,7 @@ func cmdClean(ctx context.Context, a *app) error {
 		return fmt.Errorf("clean %s: %w", dir, err)
 	}
 	a.says("loc: removed %s\n", dir)
-
-	// A Go target placed in the package that embeds it shares that directory
-	// with hand-written source, so only what loc owns there goes.
-	if cfg.Redirected(message.TargetBackend) {
-		shared := cfg.AbsTargetOutput(message.TargetBackend)
-		removed, err := removeOwned(shared)
-		if err != nil {
-			return err
-		}
-		for _, name := range removed {
-			a.says("loc: removed %s\n", filepath.Join(shared, name))
-		}
-	}
 	return nil
-}
-
-// removeOwned deletes the files loc generates inside a shared package, and
-// nothing else in it.
-func removeOwned(dir string) ([]string, error) {
-	var removed []string
-
-	err := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
-		if err != nil {
-			if os.IsNotExist(err) && p == dir {
-				return filepath.SkipAll
-			}
-			return err
-		}
-		if d.IsDir() {
-			return nil
-		}
-		rel, err := filepath.Rel(dir, p)
-		if err != nil {
-			return err
-		}
-		mine, err := generate.Owns(dir, filepath.ToSlash(rel))
-		if err != nil {
-			return err
-		}
-		if !mine {
-			return nil
-		}
-		if err := os.Remove(p); err != nil {
-			return err
-		}
-		removed = append(removed, filepath.ToSlash(rel))
-		return nil
-	})
-	if err != nil {
-		return removed, fmt.Errorf("clean %s: %w", dir, err)
-	}
-	sort.Strings(removed)
-	return removed, nil
 }
 
 // removable decides whether RemoveAll may be pointed at the output directory.

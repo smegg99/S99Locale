@@ -10,9 +10,8 @@ import (
 	"testing"
 )
 
-// Two builds racing on one output must not lose a file. Without the lock,
-// orphan detection in one run reads a tree the other is still writing and can
-// delete a file it thinks is debris.
+// Two builds racing on one output must not lose a file: without the lock, one run can remove
+// a file another has just written.
 func TestConcurrentBuildsDoNotLoseFiles(t *testing.T) {
 	path := project(t, valid)
 	a, _, _ := testApp(t, options{configPath: path})
@@ -24,10 +23,7 @@ func TestConcurrentBuildsDoNotLoseFiles(t *testing.T) {
 	generated := filepath.Join(filepath.Dir(path), "generated")
 	want := countFiles(t, generated)
 
-	// Race from a clean tree, or every run finds its output unchanged, writes
-	// nothing, and the test proves nothing. Writing is where they collide:
-	// writeAtomic stages a .loc-* temp file that another run's orphan sweep
-	// sees as debris it did not produce.
+	// Race from an empty tree, or every run finds its output unchanged and writes nothing.
 	if err := os.RemoveAll(generated); err != nil {
 		t.Fatal(err)
 	}

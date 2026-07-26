@@ -1,0 +1,1 @@
+{"emails.digest.subject":{"one":"1 new message","other":"{{.Count}} new messages"},"emails.welcome.body":"Hello {{.Name}}, your account is ready.","emails.welcome.subject":"Welcome to {{.Product}}"}
