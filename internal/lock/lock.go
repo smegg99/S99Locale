@@ -1,34 +1,105 @@
 // internal/lock/lock.go
 
-// Package lock serialises runs that touch the same output directory.
-//
-// `loc watch` rebuilding while someone runs `loc build` by hand is two writers
-// on one tree, and orphan detection reads a directory the other process is
-// still writing to - so a file one run just produced can look like debris to
-// the other and be deleted.
+// Package lock serialises loc runs that touch one output directory.
 package lock
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"time"
 )
 
-// Lock is held for the life of an operation. The zero value is safe to Release.
+// pollEvery is how often a waiting run retries flock.
+const pollEvery = 50 * time.Millisecond
+
+// Lock is one held advisory lock. The zero value is safe to release.
 type Lock struct {
 	file *os.File
 }
 
-// Acquire takes an advisory lock covering one output directory. Exclusive for
-// anything that writes, shared for `check`, so concurrent checks do not queue.
-//
-// It blocks rather than failing when another run holds the lock, but says so
-// first: a tool that appears to hang is worse than one that waits out loud.
-func Acquire(output string, exclusive bool) (*Lock, error) {
-	path, err := pathFor(output)
+// Held is a set of locks released together; nil and the zero value are safe to Release.
+type Held struct {
+	locks []*Lock
+}
+
+// AcquireAll takes one advisory lock per output directory: exclusive to write, shared for check.
+func AcquireAll(ctx context.Context, dirs []string, exclusive bool, onWait func()) (*Held, error) {
+	ordered, err := ordered(dirs)
+	if err != nil {
+		return nil, err
+	}
+
+	// onWait fires at most once across the whole set.
+	said := false
+	announce := func() {
+		if said || onWait == nil {
+			return
+		}
+		said = true
+		onWait()
+	}
+
+	held := &Held{}
+	for _, dir := range ordered {
+		one, err := acquireOne(ctx, dir, exclusive, announce)
+		if err != nil {
+			held.Release()
+			return nil, err
+		}
+		held.locks = append(held.locks, one)
+	}
+	return held, nil
+}
+
+// Release releases in reverse order.
+func (h *Held) Release() {
+	if h == nil {
+		return
+	}
+	for i := len(h.locks) - 1; i >= 0; i-- {
+		h.locks[i].release()
+	}
+	h.locks = nil
+}
+
+func (l *Lock) release() {
+	if l == nil || l.file == nil {
+		return
+	}
+	_ = release(l.file)
+	_ = l.file.Close()
+	l.file = nil
+}
+
+// ordered cleans, deduplicates and sorts the directories, so overlapping runs cannot deadlock.
+func ordered(dirs []string) ([]string, error) {
+	seen := map[string]struct{}{}
+	out := make([]string, 0, len(dirs))
+
+	for _, dir := range dirs {
+		abs, err := filepath.Abs(dir)
+		if err != nil {
+			return nil, fmt.Errorf("lock: resolve %s: %w", dir, err)
+		}
+		abs = filepath.Clean(abs)
+		if _, dup := seen[abs]; dup {
+			continue
+		}
+		seen[abs] = struct{}{}
+		out = append(out, abs)
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
+func acquireOne(ctx context.Context, dir string, exclusive bool, onWait func()) (*Lock, error) {
+	path, err := pathFor(dir)
 	if err != nil {
 		return nil, err
 	}
@@ -38,42 +109,49 @@ func Acquire(output string, exclusive bool) (*Lock, error) {
 		return nil, fmt.Errorf("lock: open %s: %w", path, err)
 	}
 
-	err = acquire(file, exclusive, false)
-	if errors.Is(err, errWouldBlock) {
-		fmt.Fprintln(os.Stderr, "loc: waiting for another loc run to finish")
-		err = acquire(file, exclusive, true)
-	}
-	if err != nil {
+	if err := wait(ctx, file, exclusive, onWait); err != nil {
 		file.Close()
 		return nil, fmt.Errorf("lock: %s: %w", path, err)
 	}
 	return &Lock{file: file}, nil
 }
 
-func (l *Lock) Release() {
-	if l == nil || l.file == nil {
-		return
+// wait takes the lock without ever blocking inside flock.
+func wait(ctx context.Context, file *os.File, exclusive bool, onWait func()) error {
+	err := acquire(file, exclusive)
+	if !errors.Is(err, errWouldBlock) {
+		return err
 	}
-	_ = release(l.file)
-	_ = l.file.Close()
-	l.file = nil
+	if onWait != nil {
+		onWait()
+	}
+
+	// acquire never blocks; retrying on a ticker against ctx.Done() lets ctrl-c end a wait.
+	tick := time.NewTicker(pollEvery)
+	defer tick.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-tick.C:
+			err := acquire(file, exclusive)
+			if errors.Is(err, errWouldBlock) {
+				continue
+			}
+			return err
+		}
+	}
 }
 
 // pathFor names the lock after the output directory it covers.
-//
-// In TempDir, not in the output directory: `check` needs a lock and must not
-// create that directory, which is a guarantee its own test asserts. Not in the
-// config directory either, since that is source-controlled and a stray lock
-// file would show up in every consuming repo's `git status`.
-//
-// Keyed on the output rather than the config so two configs writing to one
-// output still serialise, which is the invariant that matters.
 func pathFor(output string) (string, error) {
 	abs, err := filepath.Abs(output)
 	if err != nil {
 		return "", fmt.Errorf("lock: resolve %s: %w", output, err)
 	}
 
+	// In TempDir: check must not create the output dir, and the config dir is versioned.
 	sum := sha256.Sum256([]byte(filepath.Clean(abs)))
 	return filepath.Join(os.TempDir(), "loc-"+hex.EncodeToString(sum[:])[:16]+".lock"), nil
 }

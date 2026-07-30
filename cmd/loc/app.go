@@ -46,3 +46,8 @@ func (a *app) printReport(r *validate.Report) {
 		a.warns("%d error(s), %d warning(s)\n", errs, warns)
 	}
 }
+
+// waitingForLock says a run is waiting for another; it survives --quiet so the wait is visible.
+func (a *app) waitingForLock() {
+	a.warns("loc: waiting for another loc run to finish\n")
+}

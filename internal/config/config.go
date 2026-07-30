@@ -210,6 +210,11 @@ func (c *Config) AbsTargetOutput(t message.Target) string {
 	if c.Redirected(t) {
 		return c.abs(c.Outputs[t])
 	}
+	return c.DefaultTargetOutput(t)
+}
+
+// DefaultTargetOutput is <output>/<target>, used when outputs does not redirect a target.
+func (c *Config) DefaultTargetOutput(t message.Target) string {
 	return filepath.Join(c.AbsOutput(), string(t))
 }
 

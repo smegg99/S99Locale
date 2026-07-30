@@ -113,6 +113,21 @@ func liveDirs(cfg *config.Config) ([]os.FileInfo, error) {
 	return infos, nil
 }
 
+// Dirs is every directory a build writes or clears: each target's own and every default location.
+func Dirs(cfg *config.Config) []string {
+	// The lock is taken before Build stats anything, so list every directory retired may clear.
+	dirs := cfg.AbsTargetOutputs()
+	for _, t := range everyTarget() {
+		dirs = append(dirs, cfg.DefaultTargetOutput(t))
+	}
+	return dirs
+}
+
+// everyTarget is every target Build knows, whether or not cfg builds it.
+func everyTarget() []message.Target {
+	return []message.Target{message.TargetBackend, message.TargetWeb}
+}
+
 // retired is an empty tree at each default target location this config does not write.
 func retired(cfg *config.Config, live []os.FileInfo) ([]*Output, error) {
 	// A dropped or redirected target leaves its last build at <output>/<target>.
@@ -120,11 +135,11 @@ func retired(cfg *config.Config, live []os.FileInfo) ([]*Output, error) {
 	var out []*Output
 	var infos []os.FileInfo
 	var links []bool
-	for _, t := range []message.Target{message.TargetBackend, message.TargetWeb} {
+	for _, t := range everyTarget() {
 		if slices.Contains(cfg.Targets, t) && !cfg.Redirected(t) {
 			continue
 		}
-		dir := filepath.Join(cfg.AbsOutput(), string(t))
+		dir := cfg.DefaultTargetOutput(t)
 		info, err := os.Stat(dir)
 		if errors.Is(err, fs.ErrNotExist) {
 			// A path with no directory has no record, so there is nothing to clear.

@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -475,6 +476,56 @@ func TestAMovedTargetsOldTreeIsCleared(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, "pkg", "messages", "messages_gen.go")); err != nil {
 		t.Fatal("the moved target was not written to its new directory")
+	}
+}
+
+// Dirs names every tree a build writes or clears, retired ones included, and no ancestor.
+func TestDirsNameEveryTreeABuildTouches(t *testing.T) {
+	moved := strings.Replace(bothAtDefault, `go: {package`, "outputs: {backend: \"../pkg/messages\"}\ngo: {package", 1)
+	for name, body := range map[string]string{"dropped": webAtDefault, "moved": moved} {
+		t.Run(name, func(t *testing.T) {
+			cfg, _, _ := shared(t)
+			both := configure(t, cfg, bothAtDefault)
+			if _, _, err := rebuild(t, both).Write(); err != nil {
+				t.Fatal(err)
+			}
+
+			next := configure(t, both, body)
+			outs := rebuild(t, next)
+			_, removed, err := outs.Write()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(removed) == 0 {
+				t.Fatal("no tree was retired, so this proves nothing")
+			}
+
+			var trees []string
+			for _, target := range next.Targets {
+				trees = append(trees, outs.For(target).Dir)
+			}
+			// A cleared tree drops its record, which sits at the tree's root.
+			retiredTrees := 0
+			for _, label := range removed {
+				if path.Base(label) == generate.ManifestName {
+					trees = append(trees, filepath.Join(next.Dir, filepath.FromSlash(path.Dir(label))))
+					retiredTrees++
+				}
+			}
+			if retiredTrees == 0 {
+				t.Fatalf("removed = %v names no record, so no retired tree is known", removed)
+			}
+
+			var dirs []string
+			for _, dir := range generate.Dirs(next) {
+				dirs = append(dirs, filepath.Clean(dir))
+			}
+			for _, tree := range trees {
+				if !slices.Contains(dirs, filepath.Clean(tree)) {
+					t.Errorf("Dirs does not name %s: %v", tree, dirs)
+				}
+			}
+		})
 	}
 }
 

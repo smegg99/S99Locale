@@ -9,20 +9,16 @@ import (
 	"syscall"
 )
 
-// flock ties the lock to the open file description rather than the process, so
-// the kernel drops it when loc exits however it exits. There is no stale lock
-// to detect and no PID file to reap.
+// flock ties the lock to the open file description, so the kernel drops it however loc exits.
 var errWouldBlock = syscall.EWOULDBLOCK
 
-func acquire(f *os.File, exclusive, block bool) error {
+// acquire takes the lock or returns errWouldBlock at once; blocking flock cannot be interrupted.
+func acquire(f *os.File, exclusive bool) error {
 	how := syscall.LOCK_SH
 	if exclusive {
 		how = syscall.LOCK_EX
 	}
-	if !block {
-		how |= syscall.LOCK_NB
-	}
-	return syscall.Flock(int(f.Fd()), how)
+	return syscall.Flock(int(f.Fd()), how|syscall.LOCK_NB)
 }
 
 func release(f *os.File) error {

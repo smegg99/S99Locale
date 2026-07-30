@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/smegg99/s99locale/internal/config"
+	"github.com/smegg99/s99locale/internal/generate"
 	"github.com/smegg99/s99locale/internal/lock"
 )
 
@@ -41,7 +42,9 @@ func cmdClean(ctx context.Context, a *app) error {
 		return err
 	}
 
-	held, err := lock.Acquire(dir, true)
+	// RemoveAll takes every target's default directory with the tree, and a
+	// build locks those rather than the tree, so clean takes them as well.
+	held, err := lock.AcquireAll(ctx, append(generate.Dirs(cfg), dir), true, a.waitingForLock)
 	if err != nil {
 		return err
 	}

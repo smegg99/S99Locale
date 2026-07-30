@@ -30,9 +30,8 @@ func cmdBuild(ctx context.Context, a *app) error {
 		return err
 	}
 
-	// Exclusive: this writes, and orphan detection reads a tree another run
-	// could be writing to.
-	held, err := lock.Acquire(cfg.AbsOutput(), true)
+	// Exclusive over every directory Dirs names, retired trees included.
+	held, err := lock.AcquireAll(ctx, generate.Dirs(cfg), true, a.waitingForLock)
 	if err != nil {
 		return err
 	}

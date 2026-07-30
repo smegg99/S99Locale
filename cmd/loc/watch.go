@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -140,10 +141,18 @@ func watchTree(watcher *fsnotify.Watcher, root string) error {
 func rebuild(ctx context.Context, a *app) {
 	stamp := time.Now().Format("15:04:05")
 
-	if err := cmdBuild(ctx, a); err != nil {
-		// cmdBuild printed the diagnostics; this only marks the loop alive.
-		a.warns("%s  build failed; still watching\n", stamp)
+	err := cmdBuild(ctx, a)
+	if err == nil {
+		a.says("%s  ok\n", stamp)
 		return
 	}
-	a.says("%s  ok\n", stamp)
+	// ctrl-c ended the build, usually a lock wait; a failure line would blame the sources.
+	if ctx.Err() != nil {
+		return
+	}
+	// cmdBuild prints diagnostics for errFailed only; any other error is printed here.
+	if !errors.Is(err, errFailed) {
+		a.warns("loc: %v\n", err)
+	}
+	a.warns("%s  build failed; still watching\n", stamp)
 }

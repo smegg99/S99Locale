@@ -58,8 +58,8 @@ func cmdCheck(ctx context.Context, a *app, asJSON bool) error {
 		return a.checkJSON(report, nil, nil, 0, err)
 	}
 
-	// Shared: check only reads, so two CI jobs checking at once need not queue.
-	held, err := lock.Acquire(cfg.AbsOutput(), false)
+	// Shared lock over every tree a build writes or clears, retired ones included: check only reads.
+	held, err := lock.AcquireAll(ctx, generate.Dirs(cfg), false, a.waitingForLock)
 	if err != nil {
 		return err
 	}
