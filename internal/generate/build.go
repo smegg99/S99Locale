@@ -39,19 +39,10 @@ type Manifest struct {
 
 // Build generates every configured target into its own tree, without writing.
 func Build(ctx context.Context, cfg *config.Config, set *message.Set) (*Outputs, error) {
-	outs := newOutputs()
-	for _, target := range cfg.Targets {
-		outs.add(NewOutput(cfg.AbsTargetOutput(target), cfg.TargetLabel(target), target))
-	}
-	live, err := liveDirs(cfg)
+	outs, err := trees(cfg)
 	if err != nil {
 		return nil, err
 	}
-	old, err := retired(cfg, live)
-	if err != nil {
-		return nil, err
-	}
-	outs.retired = old
 
 	for _, target := range cfg.Targets {
 		// Cancellation is checked between targets; each one is a whole bundle.
@@ -86,6 +77,24 @@ func Build(ctx context.Context, cfg *config.Config, set *message.Set) (*Outputs,
 			return nil, err
 		}
 	}
+	return outs, nil
+}
+
+// trees is an empty tree in every directory a build writes or clears: live targets, then retired.
+func trees(cfg *config.Config) (*Outputs, error) {
+	outs := newOutputs()
+	for _, target := range cfg.Targets {
+		outs.add(NewOutput(cfg.AbsTargetOutput(target), cfg.TargetLabel(target), target))
+	}
+	live, err := liveDirs(cfg)
+	if err != nil {
+		return nil, err
+	}
+	old, err := retired(cfg, live)
+	if err != nil {
+		return nil, err
+	}
+	outs.retired = old
 	return outs, nil
 }
 

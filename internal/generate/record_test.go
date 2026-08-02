@@ -178,7 +178,7 @@ func tamper(t *testing.T, dir string, edit func(man map[string]any)) {
 	}
 }
 
-// A record a person edited or merged badly never removes a file, whatever it names: build and check both stop.
+// A tampered record never removes a file: build, check and clean all stop.
 func TestABadRecordRemovesNothing(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
@@ -261,6 +261,13 @@ func TestABadRecordRemovesNothing(t *testing.T) {
 			}
 			if written != 0 || len(removed) != 0 {
 				t.Fatalf("wrote %d and removed %v before refusing", written, removed)
+			}
+			removed, err = generate.Clean(cfg)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("clean: err = %v, want %q", err, tc.want)
+			}
+			if len(removed) != 0 {
+				t.Fatalf("clean removed %v before refusing", removed)
 			}
 			for _, keep := range []string{
 				victim,
@@ -544,6 +551,10 @@ func TestAnEditedFileInARetiredTreeStopsTheBuild(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "generated/backend/locales/pl.json was modified since loc wrote it") {
 		t.Fatalf("err = %v, want a refusal", err)
 	}
+	removed, err := generate.Clean(moved)
+	if err == nil || !strings.Contains(err.Error(), "generated/backend/locales/pl.json was modified since loc wrote it") || len(removed) != 0 {
+		t.Fatalf("clean: removed %v, err %v; want a refusal", removed, err)
+	}
 	if _, err := os.Stat(edited); err != nil {
 		t.Fatal("the edited file was removed")
 	}
@@ -572,6 +583,10 @@ func TestARecordedPathThatIsNowASymlinkIsRefused(t *testing.T) {
 	_, _, err = rebuild(t, reload(t, cfg, `locales: ["en", "pl"]`, `locales: ["en"]`)).Write()
 	if err == nil || !strings.Contains(err.Error(), "../pkg/messages/locales/pl.json was modified since loc wrote it") {
 		t.Fatalf("err = %v, want a refusal", err)
+	}
+	removed, err := generate.Clean(cfg)
+	if err == nil || !strings.Contains(err.Error(), "../pkg/messages/locales/pl.json was modified since loc wrote it") || len(removed) != 0 {
+		t.Fatalf("clean: removed %v, err %v; want a refusal", removed, err)
 	}
 	if _, err := os.Lstat(link); err != nil {
 		t.Fatal("the symlink was removed")
@@ -780,7 +795,7 @@ go: {package: "messages"}
 func TestTwoOldPathsThatAreOneDirectoryAreClearedOnce(t *testing.T) {
 	for _, tc := range []struct {
 		name string
-		// link is the old path replaced by a symlink to the other one; gone is what the build removes, under the link's name.
+		// link: the old path that is a symlink; gone: what build or clean removes under its name.
 		link, dest string
 		gone       []string
 	}{
@@ -799,57 +814,80 @@ func TestTwoOldPathsThatAreOneDirectoryAreClearedOnce(t *testing.T) {
 			"generated/backend/plurals.gen.ts",
 		}},
 	} {
-		t.Run(tc.name, func(t *testing.T) {
-			cfg, _, dir := shared(t)
-			both := configure(t, cfg, bothAtDefault)
-			if _, _, err := rebuild(t, both).Write(); err != nil {
-				t.Fatal(err)
+		// The moved trees were never built, so clean finds exactly the old tree too.
+		for _, clean := range []bool{false, true} {
+			name := tc.name + ", build"
+			if clean {
+				name = tc.name + ", clean"
 			}
-			gen := filepath.Join(dir, "i18n", "generated")
-			link := filepath.Join(gen, tc.link)
-			if err := os.RemoveAll(link); err != nil {
-				t.Fatal(err)
-			}
-			if err := os.Symlink(tc.dest, link); err != nil {
-				t.Skipf("no symlinks here: %v", err)
-			}
-
-			moved := configure(t, both, strings.Replace(bothAtDefault, `go: {package`,
-				"outputs: {backend: \"../pkg/messages\", web: \"../public\"}\ngo: {package", 1))
-			next := rebuild(t, moved)
-			stale, modified, err := next.Diff()
-			if err != nil || len(modified) != 0 {
-				t.Fatalf("modified %v, err %v", modified, err)
-			}
-			var old []string
-			for _, p := range stale {
-				if strings.HasPrefix(p, "generated/") {
-					old = append(old, p)
+			t.Run(name, func(t *testing.T) {
+				cfg, _, dir := shared(t)
+				both := configure(t, cfg, bothAtDefault)
+				if _, _, err := rebuild(t, both).Write(); err != nil {
+					t.Fatal(err)
 				}
-			}
-			if !slices.Equal(old, tc.gone) {
-				t.Fatalf("stale under generated/ = %v, want each once: %v", old, tc.gone)
-			}
+				gen := filepath.Join(dir, "i18n", "generated")
+				link := filepath.Join(gen, tc.link)
+				if err := os.RemoveAll(link); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(tc.dest, link); err != nil {
+					t.Skipf("no symlinks here: %v", err)
+				}
+				linkSurvives := func() {
+					t.Helper()
+					if info, err := os.Lstat(link); err != nil || info.Mode()&os.ModeSymlink == 0 {
+						t.Fatalf("the link %s did not survive: %v", link, err)
+					}
+					if info, err := os.Stat(link); err != nil || !info.IsDir() {
+						t.Fatalf("the link %s no longer leads to a directory: %v", link, err)
+					}
+				}
 
-			_, removed, err := next.Write()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !slices.Equal(removed, tc.gone) {
-				t.Fatalf("removed = %v, want each once: %v", removed, tc.gone)
-			}
-			if info, err := os.Lstat(link); err != nil || info.Mode()&os.ModeSymlink == 0 {
-				t.Fatalf("the link %s did not survive: %v", link, err)
-			}
-			if info, err := os.Stat(link); err != nil || !info.IsDir() {
-				t.Fatalf("the link %s no longer leads to a directory: %v", link, err)
-			}
+				moved := configure(t, both, strings.Replace(bothAtDefault, `go: {package`,
+					"outputs: {backend: \"../pkg/messages\", web: \"../public\"}\ngo: {package", 1))
+				if clean {
+					removed, err := generate.Clean(moved)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if !slices.Equal(removed, tc.gone) {
+						t.Fatalf("removed = %v, want each once: %v", removed, tc.gone)
+					}
+					linkSurvives()
+					return
+				}
 
-			written, removed, err := rebuild(t, moved).Write()
-			if err != nil || written != 0 || len(removed) != 0 {
-				t.Fatalf("second build: wrote %d, removed %v, err %v; want nothing", written, removed, err)
-			}
-		})
+				next := rebuild(t, moved)
+				stale, modified, err := next.Diff()
+				if err != nil || len(modified) != 0 {
+					t.Fatalf("modified %v, err %v", modified, err)
+				}
+				var old []string
+				for _, p := range stale {
+					if strings.HasPrefix(p, "generated/") {
+						old = append(old, p)
+					}
+				}
+				if !slices.Equal(old, tc.gone) {
+					t.Fatalf("stale under generated/ = %v, want each once: %v", old, tc.gone)
+				}
+
+				_, removed, err := next.Write()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !slices.Equal(removed, tc.gone) {
+					t.Fatalf("removed = %v, want each once: %v", removed, tc.gone)
+				}
+				linkSurvives()
+
+				written, removed, err := rebuild(t, moved).Write()
+				if err != nil || written != 0 || len(removed) != 0 {
+					t.Fatalf("second build: wrote %d, removed %v, err %v; want nothing", written, removed, err)
+				}
+			})
+		}
 	}
 }
 
@@ -870,5 +908,8 @@ func TestTwoTargetsInOneDirectoryAreRefused(t *testing.T) {
 	want := `generate: targets "web" and "backend" both write into ../pkg/messages: ../public is the same directory`
 	if err == nil || err.Error() != want {
 		t.Fatalf("err = %v, want %s", err, want)
+	}
+	if _, err := generate.Clean(linked); err == nil || err.Error() != want {
+		t.Fatalf("clean: err = %v, want %s", err, want)
 	}
 }

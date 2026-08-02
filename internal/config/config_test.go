@@ -197,8 +197,8 @@ func TestAnUnknownTargetKeyInOutputsIsRejected(t *testing.T) {
 	}
 }
 
-// `output: "."` would make the config directory the tree `loc clean` removes
-// whole, so it is refused at load, before any command runs.
+// `output: "."` would make the config directory the parent `loc clean` prunes,
+// so it is refused at load, before any command runs.
 func TestOutputMayNotBeTheConfigDirectory(t *testing.T) {
 	if got := loadErr(t, valid+"\noutput: \".\"\n"); !strings.Contains(got, "not below the config directory") {
 		t.Fatalf("err = %q", got)
@@ -299,8 +299,7 @@ func TestAnAbsoluteOutputInsideTheConfigDirectoryLoads(t *testing.T) {
 	}
 }
 
-// `loc clean` removes the output tree whole, so a root under it would go with
-// it.
+// No source root may sit under the output tree loc prunes.
 func TestOutputMayNotHoldASourceRoot(t *testing.T) {
 	if got := loadErr(t, valid+"\noutput: \"i18n\"\n"); !strings.Contains(got, "holds the source root") {
 		t.Fatalf("err = %q", got)
@@ -327,8 +326,7 @@ func TestTwoTargetsMayNotShareADirectoryInEitherOrder(t *testing.T) {
 	}
 }
 
-// `loc clean` removes the output tree whole, so a redirected target inside it
-// would lose its files, and any source beside them, with it.
+// A redirected target may not sit inside the output tree loc prunes.
 func TestARedirectedTargetMayNotSitInsideTheOutputTree(t *testing.T) {
 	if got := loadErr(t, valid+"\noutputs: {backend: \"generated/pkg\"}\n"); !strings.Contains(got, "inside the output tree") {
 		t.Fatalf("err = %q", got)

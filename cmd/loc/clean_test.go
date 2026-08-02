@@ -5,7 +5,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,25 +12,28 @@ import (
 )
 
 func TestCleanRemovesOnlyTheOutput(t *testing.T) {
-	path := project(t, valid)
-	a, _, _ := testApp(t, options{configPath: path})
+	a, out, _ := testApp(t, options{configPath: project(t, valid)})
 	ctx := context.Background()
 
 	if err := cmdBuild(ctx, a); err != nil {
 		t.Fatal(err)
 	}
+	dir := filepath.Dir(a.opts.configPath)
 
-	dir := filepath.Dir(path)
+	out.Reset()
 	if err := cmdClean(ctx, a); err != nil {
 		t.Fatal(err)
 	}
-
 	if _, err := os.Stat(filepath.Join(dir, "generated")); !os.IsNotExist(err) {
 		t.Fatal("clean left the output behind")
 	}
 	// clean leaves the canonical source alone.
 	if _, err := os.Stat(filepath.Join(dir, "locales", "en", "common.yaml")); err != nil {
 		t.Fatal("clean removed the source")
+	}
+	// Each removed file is named.
+	if !strings.Contains(out.String(), "loc: removed generated/web/loc-manifest.json\n") {
+		t.Fatalf("out = %q", out.String())
 	}
 }
 
@@ -54,119 +56,67 @@ func TestCleanOnACancelledContextRemovesNothing(t *testing.T) {
 	}
 }
 
-// Removing a mistyped path would be unrecoverable, so an output that resolves
-// to the config's own directory is refused.
-func TestCleanRefusesToRemoveTheConfigDirectory(t *testing.T) {
-	dir := t.TempDir()
-
-	if err := os.MkdirAll(filepath.Join(dir, "locales", "en"), 0o755); err != nil {
+// A clean that fails after clearing one tree still reports its removals, even under --quiet.
+func TestAFailedCleanSaysWhatItRemoved(t *testing.T) {
+	path := project(t, valid)
+	both := strings.Replace(cliConfig, `targets: ["web"]`, `targets: ["web", "backend"]`, 1)
+	if err := os.WriteFile(path, []byte(both), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "locales", "en", "a.yaml"),
-		[]byte("x:\n  value: \"y\"\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	path := filepath.Join(dir, "config.cue")
-	body := strings.Replace(cliConfig, `output: "generated"`, `output: "."`, 1)
-	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+	a, out, _ := testApp(t, options{configPath: path, quiet: true})
+	ctx := context.Background()
+	if err := cmdBuild(ctx, a); err != nil {
 		t.Fatal(err)
 	}
 
-	a, _, _ := testApp(t, options{configPath: path})
-	err := cmdClean(context.Background(), a)
-	if err == nil {
-		t.Fatal("clean accepted its own config directory as the output")
-	}
-	if !strings.Contains(err.Error(), "not below the config directory") {
-		t.Fatalf("err = %v", err)
-	}
-	if _, statErr := os.Stat(filepath.Join(dir, "locales")); statErr != nil {
-		t.Fatal("the source was removed anyway")
-	}
-}
-
-// `output: ".."` reaches outside the project entirely. RemoveAll on it took the
-// canonical source and every sibling directory with it.
-func TestCleanRefusesAnOutputAboveTheConfigDirectory(t *testing.T) {
-	dir := t.TempDir()
-	sibling := filepath.Join(dir, "precious")
-
-	if err := os.MkdirAll(sibling, 0o755); err != nil {
+	// web is cleared first; an unremovable backend directory fails the second tree.
+	backend := filepath.Join(filepath.Dir(path), "generated", "backend")
+	if err := os.Chmod(backend, 0o555); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(sibling, "keep.txt"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+	t.Cleanup(func() { _ = os.Chmod(backend, 0o755) })
+	if probe, err := os.CreateTemp(backend, "probe"); err == nil {
+		probe.Close()
+		os.Remove(probe.Name())
+		t.Skip("a read-only directory is still writable here")
 	}
 
-	path := cleanProject(t, filepath.Join(dir, "i18n"), `output: ".."`)
-
-	a, _, _ := testApp(t, options{configPath: path})
-	err := cmdClean(context.Background(), a)
-	if err == nil {
-		t.Fatal("clean accepted an output above the config directory")
+	if err := cmdClean(ctx, a); err == nil {
+		t.Fatal("clean of a read-only tree succeeded")
 	}
-	if !strings.Contains(err.Error(), "not below the config directory") {
-		t.Fatalf("err = %v", err)
+	if want := "loc: removed generated/web/loc-manifest.json\n"; !strings.Contains(out.String(), want) {
+		t.Fatalf("the failed clean hid %q:\n%s", want, out.String())
 	}
-	if _, statErr := os.Stat(filepath.Join(sibling, "keep.txt")); statErr != nil {
-		t.Fatal("clean removed a sibling of the config directory")
-	}
-}
-
-// An absolute output elsewhere is the same mistake with a different spelling.
-func TestCleanRefusesAnAbsoluteOutputElsewhere(t *testing.T) {
-	elsewhere := t.TempDir()
-	path := cleanProject(t, t.TempDir(), fmt.Sprintf("output: %q", elsewhere))
-
-	a, _, _ := testApp(t, options{configPath: path})
-	if err := cmdClean(context.Background(), a); err == nil {
-		t.Fatal("clean accepted an absolute output outside the project")
-	}
-	if _, statErr := os.Stat(elsewhere); statErr != nil {
-		t.Fatal("clean removed an unrelated directory")
-	}
-}
-
-// Output pointed at a canonical root would delete the source it was built from.
-func TestCleanRefusesAnOutputHoldingASourceRoot(t *testing.T) {
-	path := cleanProject(t, t.TempDir(), `output: "."`)
-
-	a, _, _ := testApp(t, options{configPath: path})
-	if err := cmdClean(context.Background(), a); err == nil {
-		t.Fatal("clean accepted an output holding the canonical root")
-	}
-	if _, statErr := os.Stat(filepath.Join(filepath.Dir(path), "locales", "en", "a.yaml")); statErr != nil {
-		t.Fatal("clean removed the canonical source")
-	}
-}
-
-// cleanProject writes a minimal project into dir, with output overridden.
-func cleanProject(t *testing.T, dir, output string) string {
-	t.Helper()
-
-	full := filepath.Join(dir, "locales", "en", "a.yaml")
-	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(full, []byte("x:\n  value: \"y\"\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	body := strings.Replace(cliConfig, `output: "generated"`, output, 1)
-	body = strings.Replace(body, `locales: ["en", "pl"]`, `locales: ["en"]`, 1)
-
-	path := filepath.Join(dir, "config.cue")
-	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	return path
 }
 
 func TestCleanOnNothingIsFine(t *testing.T) {
-	a, _, _ := testApp(t, options{configPath: project(t, valid)})
+	a, out, _ := testApp(t, options{configPath: project(t, valid)})
 
 	if err := cmdClean(context.Background(), a); err != nil {
 		t.Fatalf("err = %v", err)
+	}
+	if !strings.Contains(out.String(), "nothing to clean") {
+		t.Fatalf("out = %q", out.String())
+	}
+}
+
+// A tree loc has no record of stays, whatever it is named.
+func TestCleanLeavesATreeItNeverRecorded(t *testing.T) {
+	a, _, _ := testApp(t, options{configPath: project(t, valid)})
+	dir := filepath.Dir(a.opts.configPath)
+
+	stray := filepath.Join(dir, "generated", "web", "keys.gen.ts")
+	if err := os.MkdirAll(filepath.Dir(stray), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(stray, []byte("export type K = string\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := cmdClean(context.Background(), a); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(stray); err != nil {
+		t.Fatal("clean removed a file it had no record of")
 	}
 }

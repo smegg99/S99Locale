@@ -4,10 +4,6 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -37,70 +33,28 @@ func cmdClean(ctx context.Context, a *app) error {
 		return err
 	}
 
-	dir := cfg.AbsOutput()
-	if err := removable(cfg, dir); err != nil {
-		return err
-	}
-
-	// RemoveAll takes every target's default directory with the tree, and a
-	// build locks those rather than the tree, so clean takes them as well.
-	held, err := lock.AcquireAll(ctx, append(generate.Dirs(cfg), dir), true, a.waitingForLock)
+	// Exclusive over every directory a build writes or clears, retired ones included.
+	held, err := lock.AcquireAll(ctx, generate.Dirs(cfg), true, a.waitingForLock)
 	if err != nil {
 		return err
 	}
 	defer held.Release()
 
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
+	removed, err := generate.Clean(cfg)
+	if err != nil {
+		// Trees cleared before the failure stay cleared, so their removals are reported with the error.
+		for _, name := range removed {
+			a.warns("loc: removed %s\n", name)
+		}
+		return err
+	}
+
+	if len(removed) == 0 {
 		a.says("loc: nothing to clean\n")
 		return nil
 	}
-	if err := os.RemoveAll(dir); err != nil {
-		return fmt.Errorf("clean %s: %w", dir, err)
-	}
-	a.says("loc: removed %s\n", dir)
-	return nil
-}
-
-// removable decides whether RemoveAll may be pointed at the output directory.
-//
-// `output` is a config string and clean runs unattended, so a typo has to be
-// caught here rather than discovered afterwards: `output: ".."` would take the
-// canonical source and everything beside it. Nothing outside the config's own
-// directory is ever removed, and nothing that holds a source root.
-func removable(cfg *config.Config, dir string) error {
-	base, err := filepath.Abs(cfg.Dir)
-	if err != nil {
-		return fmt.Errorf("clean: %w", err)
-	}
-	target, err := filepath.Abs(dir)
-	if err != nil {
-		return fmt.Errorf("clean: %w", err)
-	}
-
-	if target == base {
-		return fmt.Errorf("refusing to clean %s: output is the config directory", dir)
-	}
-	if !under(base, target) {
-		return fmt.Errorf("refusing to clean %s: output is outside %s", dir, cfg.Dir)
-	}
-
-	for _, root := range append(cfg.AbsRoots(), cfg.AbsScan()...) {
-		abs, err := filepath.Abs(root)
-		if err != nil {
-			continue
-		}
-		if under(target, abs) {
-			return fmt.Errorf("refusing to clean %s: it holds the source root %s", dir, root)
-		}
+	for _, name := range removed {
+		a.says("loc: removed %s\n", name)
 	}
 	return nil
-}
-
-// under reports whether child is at or beneath parent.
-func under(parent, child string) bool {
-	rel, err := filepath.Rel(parent, child)
-	if err != nil {
-		return false
-	}
-	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)))
 }

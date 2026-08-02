@@ -89,23 +89,27 @@ func TestBuildAndCheckWaitForARunOnARetiredTree(t *testing.T) {
 	}
 }
 
-// clean removes the whole output tree, so it waits for a build holding a target directory inside it.
+// clean removes what every build tree's record names, so it waits for a build holding any of them.
 func TestCleanWaitsForABuildInsideTheTree(t *testing.T) {
-	path := project(t, valid)
-	a, _, _ := testApp(t, options{configPath: path})
-	if err := cmdBuild(context.Background(), a); err != nil {
-		t.Fatal(err)
-	}
+	for _, held := range []string{"web", "backend"} {
+		t.Run(held, func(t *testing.T) {
+			path := project(t, valid)
+			a, _, _ := testApp(t, options{configPath: path})
+			if err := cmdBuild(context.Background(), a); err != nil {
+				t.Fatal(err)
+			}
 
-	web := filepath.Join(filepath.Dir(path), "generated", "web")
-	holder := hold(t, web, true)
-	defer holder.Release()
+			generated := filepath.Join(filepath.Dir(path), "generated")
+			holder := hold(t, filepath.Join(generated, held), true)
+			defer holder.Release()
 
-	if err := waitOut(cmdClean, a); !errors.Is(err, context.DeadlineExceeded) {
-		t.Fatalf("err = %v, want the wait to end with the context", err)
-	}
-	if _, err := os.Stat(web); err != nil {
-		t.Fatalf("clean removed a tree another run holds: %v", err)
+			if err := waitOut(cmdClean, a); !errors.Is(err, context.DeadlineExceeded) {
+				t.Fatalf("err = %v, want the wait to end with the context", err)
+			}
+			if _, err := os.Stat(filepath.Join(generated, "web", "loc-manifest.json")); err != nil {
+				t.Fatalf("clean removed a tree another run holds: %v", err)
+			}
+		})
 	}
 }
 
@@ -127,6 +131,26 @@ func TestCheckDoesNotWaitForAnotherCheck(t *testing.T) {
 	}
 	if strings.Contains(out.String(), "loc: waiting for another loc run to finish") {
 		t.Fatalf("check waited for another check: %q", out.String())
+	}
+}
+
+// clean locks exclusive, so it waits for a check holding the tree shared.
+func TestCleanWaitsForACheck(t *testing.T) {
+	path := project(t, valid)
+	a, _, _ := testApp(t, options{configPath: path})
+	if err := cmdBuild(context.Background(), a); err != nil {
+		t.Fatal(err)
+	}
+
+	web := filepath.Join(filepath.Dir(path), "generated", "web")
+	holder := hold(t, web, false)
+	defer holder.Release()
+
+	if err := waitOut(cmdClean, a); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("err = %v, want the wait to end with the context", err)
+	}
+	if _, err := os.Stat(filepath.Join(web, "loc-manifest.json")); err != nil {
+		t.Fatalf("clean removed a tree a check was reading: %v", err)
 	}
 }
 

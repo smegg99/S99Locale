@@ -164,8 +164,7 @@ func (c *Config) targetDirs() error {
 				return fmt.Errorf("target %q writes into %s, which holds the source root %s", t, dir, root)
 			}
 		}
-		// `loc clean` removes the output tree whole, which would take a redirected
-		// target inside it along with it.
+		// loc prunes the output tree, so a redirected target must stay out of it.
 		if c.Redirected(t) && Under(out, dir) {
 			return fmt.Errorf("target %q writes into %s, which is inside the output tree %s", t, dir, out)
 		}

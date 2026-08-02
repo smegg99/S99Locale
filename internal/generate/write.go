@@ -410,8 +410,7 @@ func (o *Output) previous() (map[string]string, error) {
 		}
 		prev[clean] = sum
 	}
-	// loc's own file, removed by name rather than by hash; plan and CleanDir
-	// both handle it apart from the rest.
+	// The record itself, removed by name rather than by hash.
 	prev[ManifestName] = ""
 	return prev, nil
 }
