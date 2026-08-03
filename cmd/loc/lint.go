@@ -251,9 +251,11 @@ func references(cfg *config.Config, set *message.Set) (*scan.Result, error) {
 		return nil, err
 	}
 
+	// The output tree is skipped whole. A redirected target shares its package with hand-written code,
+	// so it is walked and loc's files there are skipped by their generated header.
 	return scan.Run(scan.Options{
 		Roots:     cfg.AbsScan(),
-		Generated: cfg.AbsOutput(),
+		Generated: []string{cfg.AbsOutput()},
 		GoNames:   generate.GoNames(cfg, set),
 		Extra:     extra,
 	})

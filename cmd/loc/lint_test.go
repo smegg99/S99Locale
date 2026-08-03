@@ -9,6 +9,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -131,6 +132,80 @@ func TestLintKeysStrictJSONThroughTheTree(t *testing.T) {
 	}
 	if len(res.Missing) != 1 || res.Missing[0].Key != "common.nope" {
 		t.Fatalf("missing = %+v, want common.nope", res.Missing)
+	}
+}
+
+// backendConfig builds the backend with output under the scan root; outputs is empty or a redirect.
+func backendConfig(outputs string) string {
+	return `
+defaultLocale: "en"
+locales: ["en", "pl"]
+targets: ["backend"]
+roots: ["locales"]
+output: "generated"
+scan: ["."]
+go: {package: "messages"}
+` + outputs
+}
+
+// Retired trees and a redirected target's generated files are ignored; a hand-written file is not.
+func TestLintKeysCountsOnlySource(t *testing.T) {
+	path := project(t, scanLocales)
+	dir := filepath.Dir(path)
+
+	write := func(rel, body string) {
+		t.Helper()
+		full := filepath.Join(dir, rel)
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	build := func(wrote string) {
+		t.Helper()
+		a, out, _ := testApp(t, options{configPath: path})
+		if err := cmdBuild(context.Background(), a); err != nil {
+			t.Fatalf("build: %v\n%s", err, out.String())
+		}
+		if _, err := os.Stat(filepath.Join(dir, wrote, "keys_gen.go")); err != nil {
+			t.Fatalf("the build wrote no keys_gen.go into %s: %v", wrote, err)
+		}
+	}
+	unused := func() []string {
+		t.Helper()
+		a, out, data := testApp(t, options{configPath: path})
+		if err := cmdLintKeys(context.Background(), a, true); err != nil {
+			t.Fatalf("lint keys: %v\n%s", err, out.String())
+		}
+		var res struct {
+			Unused []string `json:"unused"`
+		}
+		if err := json.Unmarshal(data.Bytes(), &res); err != nil {
+			t.Fatalf("stdout is not JSON: %v\n%s", err, data.String())
+		}
+		return res.Unused
+	}
+
+	write("config.cue", backendConfig(""))
+	build("generated/backend")
+	write("src/app.ts", "t('common.cancel')\n")
+
+	// Every keys_gen.go names KeyCommonOpen, so common.open stays unused until source names it.
+	write("config.cue", backendConfig(`outputs: {backend: "src/messages"}`+"\n"))
+	if got := unused(); !slices.Equal(got, []string{"common.open"}) {
+		t.Fatalf("with a retired tree on disk: unused = %v, want [common.open]", got)
+	}
+
+	build("src/messages")
+	if got := unused(); !slices.Equal(got, []string{"common.open"}) {
+		t.Fatalf("with generated files in the redirected target: unused = %v, want [common.open]", got)
+	}
+
+	write("src/messages/label.go", "package messages\n\nvar openKey = KeyCommonOpen\n")
+	if got := unused(); len(got) != 0 {
+		t.Fatalf("the hand-written file in the redirected target was not read: unused = %v", got)
 	}
 }
 

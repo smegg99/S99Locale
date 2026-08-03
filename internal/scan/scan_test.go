@@ -147,7 +147,7 @@ func TestGeneratedDirectoryIsSkipped(t *testing.T) {
 
 	res, err := scan.Run(scan.Options{
 		Roots:     []string{dir},
-		Generated: filepath.Join(dir, "generated"),
+		Generated: []string{filepath.Join(dir, "generated")},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -341,5 +341,41 @@ func TestACopyOfTheGeneratedOutputDoesNotGradeItself(t *testing.T) {
 
 	if len(res.Refs["tray.open"]) != 0 {
 		t.Fatalf("a generated copy counted as a reference: %v", res.Refs["tray.open"])
+	}
+}
+
+// Every Generated directory is skipped whole, wherever it sits under a root.
+func TestEveryGeneratedDirectoryIsSkipped(t *testing.T) {
+	dir := t.TempDir()
+
+	write := func(rel, body string) {
+		full := filepath.Join(dir, rel)
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("src/app.ts", "t('real.key')\n")
+	write("out/web/en/common.json", "{}\n")
+	write("out/web/keys.gen.ts", "t('web.generated.key')\n")
+	write("pkg/messages/keys_gen.ts", "t('backend.generated.key')\n")
+
+	res, err := scan.Run(scan.Options{
+		Roots:     []string{dir},
+		Generated: []string{filepath.Join(dir, "out", "web"), filepath.Join(dir, "pkg", "messages")},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := res.Refs["real.key"]; !ok {
+		t.Fatal("the real reference was not found")
+	}
+	for _, key := range []string{"web.generated.key", "backend.generated.key"} {
+		if _, ok := res.Refs[key]; ok {
+			t.Errorf("%s was scanned out of a generated directory", key)
+		}
 	}
 }

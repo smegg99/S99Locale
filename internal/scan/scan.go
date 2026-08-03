@@ -90,16 +90,12 @@ var skipDirs = map[string]bool{
 
 // Options configures a scan.
 type Options struct {
-	// Roots are directories to walk.
 	Roots []string
-	// Generated is skipped: the generated bundles name every key, so scanning
-	// them would make every key look used and the report always empty.
-	Generated string
-	// GoNames maps a generated identifier back to its key, so a Go accessor
-	// call resolves to something comparable.
+	// Generated are loc's output directories, skipped whole because they name every key.
+	Generated []string
+	// GoNames maps a generated identifier back to its key.
 	GoNames map[string]string
-	// Extra are repo-specific patterns, each with one capture group. A repo
-	// that wraps t() or apierr in its own helper is invisible without them.
+	// Extra are repo-specific patterns, each with one capture group.
 	Extra []*regexp.Regexp
 }
 
@@ -126,7 +122,14 @@ func Compile(patterns []string) ([]*regexp.Regexp, error) {
 func Run(opts Options) (*Result, error) {
 	res := &Result{Refs: map[string][]Reference{}}
 
-	generated, _ := filepath.Abs(opts.Generated)
+	generated := map[string]struct{}{}
+	for _, dir := range opts.Generated {
+		abs, err := filepath.Abs(dir)
+		if err != nil {
+			return nil, fmt.Errorf("scan: resolve %s: %w", dir, err)
+		}
+		generated[abs] = struct{}{}
+	}
 
 	for _, root := range opts.Roots {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -142,8 +145,8 @@ func Run(opts Options) (*Result, error) {
 				if skipDirs[d.Name()] {
 					return fs.SkipDir
 				}
-				if generated != "" {
-					if abs, _ := filepath.Abs(path); abs == generated {
+				if abs, err := filepath.Abs(path); err == nil {
+					if _, skip := generated[abs]; skip {
 						return fs.SkipDir
 					}
 				}
