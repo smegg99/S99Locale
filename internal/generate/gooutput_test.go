@@ -53,7 +53,7 @@ func shared(t *testing.T) (*config.Config, *generate.Outputs, string) {
 	write("pkg/messages/messages.go", "package messages\n")
 	write("pkg/messages/locales/de.json", "{}\n")
 
-	cfg, err := config.Load(filepath.Join(dir, "i18n/config.cue"))
+	cfg, err := config.Load(context.Background(), filepath.Join(dir, "i18n/config.cue"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +99,7 @@ func reload(t *testing.T, cfg *config.Config, from, to string) *config.Config {
 	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	next, err := config.Load(path)
+	next, err := config.Load(context.Background(), path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +118,7 @@ func buildAt(t *testing.T, spelling string) []byte {
 		t.Chdir(dir)
 		path = spelling
 	}
-	reloaded, err := config.Load(path)
+	reloaded, err := config.Load(context.Background(), path)
 	if err != nil {
 		t.Fatal(err)
 	}

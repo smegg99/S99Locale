@@ -41,7 +41,7 @@ func detect(t *testing.T, files map[string]string) []shared.Candidate {
 		t.Fatal(err)
 	}
 
-	cfg, err := config.Load(path)
+	cfg, err := config.Load(context.Background(), path)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -3,6 +3,7 @@
 package config_test
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"slices"
@@ -37,7 +38,7 @@ func write(t *testing.T, body string) string {
 
 func load(t *testing.T, body string) *config.Config {
 	t.Helper()
-	cfg, err := config.Load(write(t, body))
+	cfg, err := config.Load(context.Background(), write(t, body))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +47,7 @@ func load(t *testing.T, body string) *config.Config {
 
 func loadErr(t *testing.T, body string) string {
 	t.Helper()
-	_, err := config.Load(write(t, body))
+	_, err := config.Load(context.Background(), write(t, body))
 	if err == nil {
 		t.Fatal("expected an error")
 	}
@@ -131,7 +132,7 @@ func TestNamespaceFiltering(t *testing.T) {
 // loc must run from anywhere, so relative paths resolve against the config.
 func TestRelativePathsResolveAgainstTheConfig(t *testing.T) {
 	path := write(t, valid)
-	cfg, err := config.Load(path)
+	cfg, err := config.Load(context.Background(), path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +161,7 @@ func TestDefaultOutputLandsBesideTheConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cfg, err := config.Load(path)
+	cfg, err := config.Load(context.Background(), path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -276,7 +277,7 @@ outputs: {backend: ` + strconv.Quote(dir+tc.suffix) + `}
 			}
 			t.Chdir(dir)
 
-			_, err := config.Load("config.cue")
+			_, err := config.Load(context.Background(), "config.cue")
 			if err == nil || !strings.Contains(err.Error(), "writes into the config directory") {
 				t.Fatalf("err = %v", err)
 			}
@@ -294,7 +295,7 @@ func TestAnAbsoluteOutputInsideTheConfigDirectoryLoads(t *testing.T) {
 	}
 	t.Chdir(dir)
 
-	if _, err := config.Load("config.cue"); err != nil {
+	if _, err := config.Load(context.Background(), "config.cue"); err != nil {
 		t.Fatal(err)
 	}
 }

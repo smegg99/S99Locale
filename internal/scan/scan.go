@@ -8,6 +8,8 @@ package scan
 
 import (
 	"bufio"
+	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -119,7 +121,7 @@ func Compile(patterns []string) ([]*regexp.Regexp, error) {
 }
 
 // Run walks the roots and collects references.
-func Run(opts Options) (*Result, error) {
+func Run(ctx context.Context, opts Options) (*Result, error) {
 	res := &Result{Refs: map[string][]Reference{}}
 
 	generated := map[string]struct{}{}
@@ -133,6 +135,9 @@ func Run(opts Options) (*Result, error) {
 
 	for _, root := range opts.Roots {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return ctxErr
+			}
 			if err != nil {
 				// A missing root is skipped rather than failing the scan.
 				if os.IsNotExist(err) {
@@ -160,6 +165,9 @@ func Run(opts Options) (*Result, error) {
 			return scanFile(res, path, opts.GoNames, opts.Extra)
 		})
 		if err != nil {
+			if errors.Is(err, ctx.Err()) && ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
 			return nil, fmt.Errorf("scan: walk %s: %w", root, err)
 		}
 	}

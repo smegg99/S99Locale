@@ -3,10 +3,14 @@
 package scan_test
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/smegg99/s99locale/internal/scan"
 )
@@ -34,7 +38,7 @@ func run(t *testing.T, files map[string]string, opts ...func(*scan.Options)) *sc
 		fn(&o)
 	}
 
-	res, err := scan.Run(o)
+	res, err := scan.Run(context.Background(), o)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +149,7 @@ func TestGeneratedDirectoryIsSkipped(t *testing.T) {
 		"node_modules/x/a.ts": "t('vendored.key')\n",
 	})
 
-	res, err := scan.Run(scan.Options{
+	res, err := scan.Run(context.Background(), scan.Options{
 		Roots:     []string{dir},
 		Generated: []string{filepath.Join(dir, "generated")},
 	})
@@ -159,7 +163,7 @@ func TestGeneratedDirectoryIsSkipped(t *testing.T) {
 }
 
 func TestMissingRootIsNotAnError(t *testing.T) {
-	res, err := scan.Run(scan.Options{Roots: []string{"/does/not/exist"}})
+	res, err := scan.Run(context.Background(), scan.Options{Roots: []string{"/does/not/exist"}})
 	if err != nil {
 		t.Fatalf("err = %v", err)
 	}
@@ -362,7 +366,7 @@ func TestEveryGeneratedDirectoryIsSkipped(t *testing.T) {
 	write("out/web/keys.gen.ts", "t('web.generated.key')\n")
 	write("pkg/messages/keys_gen.ts", "t('backend.generated.key')\n")
 
-	res, err := scan.Run(scan.Options{
+	res, err := scan.Run(context.Background(), scan.Options{
 		Roots:     []string{dir},
 		Generated: []string{filepath.Join(dir, "out", "web"), filepath.Join(dir, "pkg", "messages")},
 	})
@@ -377,5 +381,66 @@ func TestEveryGeneratedDirectoryIsSkipped(t *testing.T) {
 		if _, ok := res.Refs[key]; ok {
 			t.Errorf("%s was scanned out of a generated directory", key)
 		}
+	}
+}
+
+// A cancelled scan returns the reason rather than a partial result.
+func TestScanStopsOnACancelledContext(t *testing.T) {
+	dir := t.TempDir()
+	for i := range 200 {
+		full := filepath.Join(dir, fmt.Sprintf("file%03d.ts", i))
+		if err := os.WriteFile(full, []byte("t('a.b')\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	if _, err := scan.Run(ctx, scan.Options{Roots: []string{dir}}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v, want context.Canceled", err)
+	}
+}
+
+// A passed deadline stops the scan with ctx.Err() itself, not a wrapped walk error.
+func TestScanStopsOnAnExpiredDeadline(t *testing.T) {
+	dir := tree(t, map[string]string{"app.ts": "t('a.b')\n"})
+
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
+
+	if _, err := scan.Run(ctx, scan.Options{Roots: []string{dir}}); err != context.DeadlineExceeded {
+		t.Fatalf("err = %v, want context.DeadlineExceeded unwrapped", err)
+	}
+}
+
+// cancelAfter cancels its context after the first n Err calls, interrupting a walk partway.
+type cancelAfter struct {
+	context.Context
+	n      int
+	cancel context.CancelFunc
+}
+
+func (c *cancelAfter) Err() error {
+	if c.n--; c.n < 0 {
+		c.cancel()
+	}
+	return c.Context.Err()
+}
+
+// An interrupt during the walk stops it with the reason, not a finished result.
+func TestScanStopsPartwayThroughTheWalk(t *testing.T) {
+	files := map[string]string{}
+	for i := range 20 {
+		files[fmt.Sprintf("file%02d.ts", i)] = "t('a.b')\n"
+	}
+	dir := tree(t, files)
+
+	parent, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ctx := &cancelAfter{Context: parent, n: 5, cancel: cancel}
+
+	if _, err := scan.Run(ctx, scan.Options{Roots: []string{dir}}); err != context.Canceled {
+		t.Fatalf("err = %v, want context.Canceled unwrapped", err)
 	}
 }

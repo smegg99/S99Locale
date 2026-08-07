@@ -97,7 +97,7 @@ func localesProject(t *testing.T, locales []string) *generate.Outputs {
 		"defaultLocale: \"en\"\nlocales: [%s]\ntargets: [\"web\"]\nroots: [\"locales\"]\noutput: \"generated\"\n",
 		strings.Join(quoted, ", ")))
 
-	cfg, err := config.Load(cfgPath)
+	cfg, err := config.Load(context.Background(), cfgPath)
 	if err != nil {
 		t.Fatal(err)
 	}

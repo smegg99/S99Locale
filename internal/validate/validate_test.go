@@ -42,7 +42,7 @@ roots: ["locales"]
 		t.Fatal(err)
 	}
 
-	cfg, err := config.Load(cfgPath)
+	cfg, err := config.Load(context.Background(), cfgPath)
 	if err != nil {
 		t.Fatal(err)
 	}

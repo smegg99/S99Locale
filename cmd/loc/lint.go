@@ -187,7 +187,7 @@ func cmdLintKeys(ctx context.Context, a *app, asJSON bool) error {
 		return nil
 	}
 
-	refs, err := references(cfg, set)
+	refs, err := references(ctx, cfg, set)
 	if err != nil {
 		return err
 	}
@@ -241,7 +241,7 @@ func cmdLintKeys(ctx context.Context, a *app, asJSON bool) error {
 }
 
 // references scans for key usages, mapping generated Go names back to keys.
-func references(cfg *config.Config, set *message.Set) (*scan.Result, error) {
+func references(ctx context.Context, cfg *config.Config, set *message.Set) (*scan.Result, error) {
 	if len(cfg.Scan) == 0 {
 		return &scan.Result{Refs: map[string][]scan.Reference{}}, nil
 	}
@@ -253,7 +253,7 @@ func references(cfg *config.Config, set *message.Set) (*scan.Result, error) {
 
 	// The output tree is skipped whole. A redirected target shares its package with hand-written code,
 	// so it is walked and loc's files there are skipped by their generated header.
-	return scan.Run(scan.Options{
+	return scan.Run(ctx, scan.Options{
 		Roots:     cfg.AbsScan(),
 		Generated: []string{cfg.AbsOutput()},
 		GoNames:   generate.GoNames(cfg, set),

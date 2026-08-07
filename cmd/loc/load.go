@@ -13,11 +13,7 @@ import (
 
 // load runs config, parse and validate, returning the report unprinted for `check --json`.
 func load(ctx context.Context, a *app) (*config.Config, *message.Set, *validate.Report, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, nil, nil, err
-	}
-
-	cfg, err := config.Load(a.opts.configPath)
+	cfg, err := config.Load(ctx, a.opts.configPath)
 	if err != nil {
 		return nil, nil, nil, err
 	}

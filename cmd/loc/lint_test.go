@@ -23,11 +23,11 @@ var scanLocales = map[string]string{
 // findings references common.nope, which nobody declares, and leaves common.open unreferenced.
 const findings = "t('common.cancel')\nt('common.nope')\n"
 
-// scanProject writes scanLocales, a scan root and one source file with the given body.
-func scanProject(t *testing.T, source string) string {
+// scanProject writes the locales, a scan root and one source file with the given body.
+func scanProject(t *testing.T, locales map[string]string, source string) string {
 	t.Helper()
 
-	path := project(t, scanLocales)
+	path := project(t, locales)
 	if err := os.WriteFile(path, []byte(cliConfig+"scan: [\"src\"]\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -55,12 +55,12 @@ func TestLintKeysFailsOnAFindingOnlyUnderStrict(t *testing.T) {
 		{"missing and unused", findings, errFailed},
 	} {
 		for _, asJSON := range []bool{false, true} {
-			lenient, out, _ := testApp(t, options{configPath: scanProject(t, tc.source)})
+			lenient, out, _ := testApp(t, options{configPath: scanProject(t, scanLocales, tc.source)})
 			if err := cmdLintKeys(context.Background(), lenient, asJSON); err != nil {
 				t.Errorf("%s, json=%v: failed without --strict: %v\n%s", tc.name, asJSON, err, out.String())
 			}
 
-			strict, out, _ := testApp(t, options{configPath: scanProject(t, tc.source), strict: true})
+			strict, out, _ := testApp(t, options{configPath: scanProject(t, scanLocales, tc.source), strict: true})
 			if err := cmdLintKeys(context.Background(), strict, asJSON); !errors.Is(err, tc.strict) {
 				t.Errorf("%s, json=%v: --strict = %v, want %v\n%s", tc.name, asJSON, err, tc.strict, out.String())
 			}
@@ -70,7 +70,7 @@ func TestLintKeysFailsOnAFindingOnlyUnderStrict(t *testing.T) {
 
 // A finding is a diagnostic, so --quiet keeps it; only the success lines go.
 func TestLintKeysFindingsSurviveQuiet(t *testing.T) {
-	a, out, _ := testApp(t, options{configPath: scanProject(t, findings), quiet: true})
+	a, out, _ := testApp(t, options{configPath: scanProject(t, scanLocales, findings), quiet: true})
 
 	if err := cmdLintKeys(context.Background(), a, false); err != nil {
 		t.Fatal(err)
@@ -96,7 +96,7 @@ func TestLintJSONGoesToTheDataStream(t *testing.T) {
 		{"keys", "missing", func(ctx context.Context, a *app) error { return cmdLintKeys(ctx, a, true) }},
 		{"duplicates", "duplicates", func(ctx context.Context, a *app) error { return cmdLintDuplicates(ctx, a, true) }},
 	} {
-		a, out, data := testApp(t, options{configPath: scanProject(t, findings)})
+		a, out, data := testApp(t, options{configPath: scanProject(t, scanLocales, findings)})
 		if err := tc.run(context.Background(), a); err != nil {
 			t.Fatalf("%s: %v", tc.name, err)
 		}
@@ -118,7 +118,7 @@ func TestLintJSONGoesToTheDataStream(t *testing.T) {
 func TestLintKeysStrictJSONThroughTheTree(t *testing.T) {
 	out, data := &bytes.Buffer{}, &bytes.Buffer{}
 	root := rootCmd(newApp(out, data))
-	root.SetArgs([]string{"lint", "keys", "--strict", "--json", "-c", scanProject(t, findings)})
+	root.SetArgs([]string{"lint", "keys", "--strict", "--json", "-c", scanProject(t, scanLocales, findings)})
 
 	if err := root.Execute(); !errors.Is(err, errFailed) {
 		t.Fatalf("err = %v, want errFailed\n%s", err, out.String())
@@ -260,5 +260,21 @@ func TestLintSharedVerboseThroughTheTree(t *testing.T) {
 	}
 	if !strings.Contains(shown, "I18N021") {
 		t.Errorf("lint shared --verbose hid the finding:\n%s", shown)
+	}
+}
+
+// An interrupt after the load stops the scan walk with the reason.
+func TestLintKeysScanStopsOnACancelledContext(t *testing.T) {
+	a, out, _ := testApp(t, options{configPath: scanProject(t, onlyWarnings, "t('a.x')\n")})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	// The totals line is the last thing the load prints before the scan starts.
+	a.out = cancelOn{w: out, line: "warning(s)", cancel: cancel}
+
+	if err := cmdLintKeys(ctx, a, false); !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v, want context.Canceled\n%s", err, out.String())
+	}
+	if strings.Contains(out.String(), "scanned") {
+		t.Fatalf("the scan ran to the end:\n%s", out.String())
 	}
 }

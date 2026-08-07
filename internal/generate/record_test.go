@@ -367,7 +367,7 @@ func TestARelativeConfigStillPrunes(t *testing.T) {
 	_, _, dir := shared(t)
 	t.Chdir(dir)
 
-	cfg, err := config.Load("i18n/config.cue")
+	cfg, err := config.Load(context.Background(), "i18n/config.cue")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -401,7 +401,7 @@ func configure(t *testing.T, cfg *config.Config, body string) *config.Config {
 
 	path := filepath.Join(cfg.Dir, "config.cue")
 	writeFile(t, path, []byte(body))
-	next, err := config.Load(path)
+	next, err := config.Load(context.Background(), path)
 	if err != nil {
 		t.Fatal(err)
 	}

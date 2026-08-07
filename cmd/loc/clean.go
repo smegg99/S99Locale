@@ -24,11 +24,7 @@ func newCleanCmd(a *app) *cobra.Command {
 }
 
 func cmdClean(ctx context.Context, a *app) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-
-	cfg, err := config.Load(a.opts.configPath)
+	cfg, err := config.Load(ctx, a.opts.configPath)
 	if err != nil {
 		return err
 	}

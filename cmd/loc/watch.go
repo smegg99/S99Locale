@@ -44,7 +44,7 @@ func newWatchCmd(a *app) *cobra.Command {
 // A validation error prints and the watcher keeps going: a half-typed key is
 // the normal state of a file being edited.
 func cmdWatch(ctx context.Context, a *app) error {
-	cfg, err := config.Load(a.opts.configPath)
+	cfg, err := config.Load(ctx, a.opts.configPath)
 	if err != nil {
 		return err
 	}

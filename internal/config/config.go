@@ -7,6 +7,7 @@
 package config
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"maps"
@@ -51,15 +52,18 @@ type Config struct {
 }
 
 // Load reads and validates a config file.
-func Load(path string) (*Config, error) {
-	ctx := cuecontext.New()
+func Load(ctx context.Context, path string) (*Config, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	cueCtx := cuecontext.New()
 
-	compiled := ctx.CompileBytes(schema, cue.Filename("config.cue"))
+	compiled := cueCtx.CompileBytes(schema, cue.Filename("config.cue"))
 	if err := compiled.Err(); err != nil {
 		return nil, fmt.Errorf("config: schema: %w", err)
 	}
 
-	instance, err := loadFile(ctx, path)
+	instance, err := loadFile(cueCtx, path)
 	if err != nil {
 		return nil, err
 	}
