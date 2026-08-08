@@ -1,0 +1,165 @@
+# i18n/locales/en/cli.yaml
+
+rootShort:
+  value: "Compile one canonical locale source into per-target bundles"
+  description: "loc's one-line description, in `loc --help`"
+rootLong:
+  value: "loc compiles canonical YAML into vue-i18n and go-i18n bundles, typed keys and a build record. Generated output is committed."
+  description: "loc's long description, in `loc --help`"
+
+buildShort:
+  value: "Validate and generate every configured target"
+  description: "The build subcommand's one-line description"
+checkShort:
+  value: "Validate and confirm the generated output is current"
+  description: "The check subcommand's one-line description"
+checkLong:
+  value: "Never writes, which is what CI runs. Exit 1 means the locales are wrong or the output is stale; exit 2 means loc could not run at all."
+  description: "The check subcommand's long description"
+statsShort:
+  value: "Counts by namespace, target and locale, plus bundle sizes"
+  description: "The stats subcommand's one-line description"
+lintShort:
+  value: "Report messages that may be duplicates"
+  description: "The lint subcommand's one-line description"
+lintLong:
+  value: "Never modifies anything. Merging is a decision, and an ordinary build is not the place to make it."
+  description: "The lint subcommand's long description"
+lintSharedShort:
+  value: "Keys that may belong in a shared namespace"
+  description: "The `lint shared` subcommand's one-line description"
+lintKeysShort:
+  value: "Unused and missing keys, from a source scan"
+  description: "The `lint keys` subcommand's one-line description"
+lintDuplicatesShort:
+  value: "Exact duplicate contracts, whatever they are named"
+  description: "The `lint duplicates` subcommand's one-line description"
+watchShort:
+  value: "Rebuild on every change until interrupted"
+  description: "The watch subcommand's one-line description"
+watchLong:
+  value: "Survives a validation error and keeps watching: a half-typed key is the normal state of a file being edited."
+  description: "The watch subcommand's long description"
+cleanShort:
+  value: "Remove generated artefacts"
+  description: "The clean subcommand's one-line description"
+helpShort:
+  value: "Help about any command"
+  description: "Cobra's own help subcommand, renamed so it is not the only English left"
+helpLong:
+  value: "Shows help for any command in loc. Type `loc help [path to command]` for the full text."
+  description: "Cobra's own help subcommand, long form"
+completionShort:
+  value: "Generate the shell completion script for the named shell"
+  description: "Cobra's own completion subcommand"
+completionLong:
+  value: "Generate the shell completion script for loc. Each shell's subcommand help says how to use the script it prints."
+  description: "Cobra's own completion subcommand, long form; its four shell children keep Cobra's English install recipes"
+
+flagConfig:
+  value: "config file"
+  description: "Usage text for the persistent --config flag"
+flagQuiet:
+  value: "suppress success output; diagnostics are unaffected"
+  description: "Usage text for the persistent --quiet flag"
+flagLang:
+  value: "render in this language: --lang wins over LOC_LANG, LC_ALL, LC_MESSAGES and LANG"
+  description: "Usage text for the persistent --lang flag, which states the precedence"
+flagColor:
+  value: "when to colour output: auto, always or never"
+  description: "Usage text for the persistent --color flag"
+flagJSON:
+  value: "machine-readable output"
+  description: "Usage text for the --json flag on check and lint"
+flagVerbose:
+  value: "include medium and low confidence findings"
+  description: "Usage text for --verbose on `lint shared`"
+flagStrictBuild:
+  value: "warnings fail the build"
+  description: "Usage text for --strict on build"
+flagStrictCheck:
+  value: "warnings fail the check"
+  description: "Usage text for --strict on check"
+flagStrictWatch:
+  value: "warnings fail the rebuild"
+  description: "Usage text for --strict on watch"
+flagStrictLint:
+  value: "warnings, and lint keys findings, fail the lint"
+  description: "Usage text for the persistent --strict on lint: lint shared and lint duplicates never fail on their candidates"
+flagHelp:
+  value: "help for {command}"
+  description: "Usage text Cobra generates for every --help flag"
+  placeholders:
+    command: {type: string}
+flagVersion:
+  value: "print the version and exit"
+  description: "Usage text Cobra generates for the --version flag"
+
+headingUsage:
+  value: "Usage:"
+  description: "Heading in the help template"
+headingAliases:
+  value: "Aliases:"
+  description: "Heading in the help template"
+headingExamples:
+  value: "Examples:"
+  description: "Heading in the help template"
+headingCommands:
+  value: "Available Commands:"
+  description: "Heading in the help template"
+headingAdditionalCommands:
+  value: "Additional Commands:"
+  description: "Heading in the help template"
+headingFlags:
+  value: "Flags:"
+  description: "Heading in the help template"
+headingGlobalFlags:
+  value: "Global Flags:"
+  description: "Heading in the help template"
+headingHelpTopics:
+  value: "Additional help topics:"
+  description: "Heading in the help template"
+headingMoreInfo:
+  value: "Use \"{command} [command] --help\" for more information about a command."
+  description: "Closing line of the help template; [command] is Cobra's literal token, as in the usage line above it"
+  placeholders:
+    command: {type: string}
+
+errUnsupportedLanguage:
+  value: "unsupported language {lang}; loc speaks {supported}"
+  description: "Rejects --lang with a language loc has no catalogue for"
+  placeholders:
+    lang: {type: string}
+    supported: {type: string}
+errNoArgs:
+  value: "{command} takes no arguments"
+  description: "Usage error when a subcommand is given a positional argument"
+  placeholders:
+    command: {type: string}
+errUnknownColor:
+  value: "unknown value {value} for --color; use auto, always or never"
+  description: "Usage error for an unrecognised --color value"
+  placeholders:
+    value: {type: string}
+
+statusOk:
+  value: "ok"
+  description: "The word beside the [+] glyph on a finished line"
+statusFailed:
+  value: "failed"
+  description: "The word beside the [x] glyph on a finished line"
+statusSkipped:
+  value: "skipped"
+  description: "The word beside the [-] glyph on a finished line"
+statusWaiting:
+  value: "waiting"
+  description: "The word beside the [ ] glyph on a finished line"
+statusRunning:
+  value: "running"
+  description: "The word beside the [*] glyph on a finished line"
+statusWarning:
+  value: "warning"
+  description: "The word beside the [!] glyph on a finished line"
+statusStale:
+  value: "stale"
+  description: "The word beside the [~] glyph on a finished line"

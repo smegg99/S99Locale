@@ -1,0 +1,170 @@
+# i18n/locales/pl/report.yaml
+
+buildGenerated:
+  value: "loc: wygenerowano plików: {files}, zmieniono: {changed}"
+  placeholders:
+    files: {type: integer}
+    changed: {type: integer}
+buildRemoved:
+  value: "loc: usunięto {path}"
+  placeholders:
+    path: {type: string}
+buildWorking:
+  value: "budowanie tłumaczeń"
+checkWorking:
+  value: "sprawdzanie tłumaczeń"
+checkCurrent:
+  plural:
+    argument: files
+    forms:
+      one: "loc: {files} plik jest aktualny"
+      few: "loc: {files} pliki są aktualne"
+      many: "loc: {files} plików jest aktualnych"
+      other: "loc: {files} pliku jest aktualne"
+  placeholders:
+    files: {type: integer}
+checkStale:
+  value: "wygenerowane pliki są nieaktualne; uruchom `loc build`:"
+checkModified:
+  value: "loc nie może dowieść, że zapisał te pliki, więc budowanie ich nie ruszy; usuń je ręcznie:"
+cleanRemoved:
+  value: "loc: usunięto {path}"
+  placeholders:
+    path: {type: string}
+cleanNothing:
+  value: "loc: nie ma czego usuwać"
+waitingForLock:
+  value: "loc: oczekiwanie na zakończenie innego uruchomienia loc"
+errorsAndWarnings:
+  value: "błędów: {errors}, ostrzeżeń: {warnings}"
+  placeholders:
+    errors: {type: integer}
+    warnings: {type: integer}
+
+watchWatching:
+  plural:
+    argument: roots
+    forms:
+      one: "loc: obserwuję {roots} katalog; ctrl-c kończy"
+      few: "loc: obserwuję {roots} katalogi; ctrl-c kończy"
+      many: "loc: obserwuję {roots} katalogów; ctrl-c kończy"
+      other: "loc: obserwuję {roots} katalogu; ctrl-c kończy"
+  placeholders:
+    roots: {type: integer}
+watchStopped:
+  value: "loc: zatrzymano"
+watchFailed:
+  value: "budowanie nie powiodło się; nadal obserwuję"
+watchOk:
+  value: "ok"
+watchError:
+  value: "loc: watch: {error}"
+  placeholders:
+    error: {type: string}
+
+statsLocales:
+  value: "języki"
+statsMessages:
+  value: "wiadomości"
+statsByNamespace:
+  value: "według przestrzeni nazw"
+statsByTarget:
+  value: "według celu"
+statsMissing:
+  value: "brakujące tłumaczenia"
+statsGeneratedSize:
+  value: "rozmiar wygenerowanych plików"
+statsTotal:
+  value: "razem"
+statsColumnName:
+  value: "NAZWA"
+statsColumnCount:
+  value: "LICZBA"
+statsColumnSize:
+  value: "ROZMIAR"
+
+lintNoShared:
+  value: "loc: brak kandydatów na wspólne wiadomości"
+lintCandidates:
+  plural:
+    argument: count
+    forms:
+      one: "{count} kandydat"
+      few: "{count} kandydatów"
+      many: "{count} kandydatów"
+      other: "{count} kandydata"
+  placeholders:
+    count: {type: integer}
+lintHidden:
+  plural:
+    argument: count
+    forms:
+      one: "ukryto {count} znalezisko o niższej pewności; zobacz `loc lint shared --verbose`"
+      few: "ukryto {count} znaleziska o niższej pewności; zobacz `loc lint shared --verbose`"
+      many: "ukryto {count} znalezisk o niższej pewności; zobacz `loc lint shared --verbose`"
+      other: "ukryto {count} znaleziska o niższej pewności; zobacz `loc lint shared --verbose`"
+  placeholders:
+    count: {type: integer}
+lintNoDuplicates:
+  value: "loc: brak zduplikowanych kontraktów"
+lintDuplicates:
+  plural:
+    argument: count
+    forms:
+      one: "{count} zduplikowany kontrakt"
+      few: "{count} zduplikowane kontrakty"
+      many: "{count} zduplikowanych kontraktów"
+      other: "{count} zduplikowanego kontraktu"
+  placeholders:
+    count: {type: integer}
+lintScanned:
+  value: "przeskanowano plików: {files}, w katalogach: {roots}"
+  placeholders:
+    files: {type: integer}
+    roots: {type: integer}
+lintNoScanRoots:
+  value: "loc: nie skonfigurowano katalogów do skanowania; nie ma z czym porównać"
+lintClean:
+  value: "loc: każdy zadeklarowany klucz jest używany, a każde odwołanie wskazuje zadeklarowany klucz"
+lintPossibleShared:
+  value: "możliwa wspólna wiadomość"
+lintReferencedNotDeclared:
+  value: "używany, ale niezadeklarowany"
+lintDeclaredNotReferenced:
+  value: "zadeklarowany, ale nieużywany"
+lintDynamicHint:
+  value: "Klucz budowany w czasie działania wygląda na nieużywany. Zadeklaruj go w dynamicKeys zamiast go usuwać."
+lintKeysLabel:
+  value: "Klucze"
+lintTranslationsLabel:
+  value: "Tłumaczenia"
+lintSuggestedLabel:
+  value: "Proponowany klucz"
+lintConfidenceLabel:
+  value: "Pewność"
+lintConfidenceHigh:
+  value: "wysoka"
+lintConfidenceMedium:
+  value: "średnia"
+lintConfidenceLow:
+  value: "niska"
+lintReasonOneLocale:
+  value: "skonfigurowano tylko jeden język, więc zgodny tekst niczego nie dowodzi"
+lintReasonDescriptions:
+  value: "opisy się różnią, więc mogą to być dwa pojęcia, które przypadkiem się pokrywają"
+lintReasonTargets:
+  value: "cele się różnią, więc renderują je różne środowiska uruchomieniowe"
+lintReasonContract:
+  value: "tekst zgadza się w każdym języku, ale kontrakt placeholderów lub liczby mnogiej się różni"
+lintReasonDefaultOnly:
+  value: "tekst zgadza się tylko w {locale}; w pozostałych językach się różni"
+  placeholders:
+    locale: {type: string}
+lintColumnKey:
+  value: "KLUCZ"
+lintColumnLocation:
+  value: "MIEJSCE"
+lintColumnConfidence:
+  value: "PEWNOŚĆ"
+lintColumnKeys:
+  value: "KLUCZE"

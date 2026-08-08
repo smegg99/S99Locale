@@ -1,0 +1,98 @@
+# i18n/locales/pl/diag.yaml
+
+fileTooLarge:
+  value: "plik ma {size} MB, a limit to {limit} MB. Podziel go na mniejsze pliki"
+  placeholders:
+    size: {type: integer}
+    limit: {type: integer}
+unreadable:
+  value: "nie udało się odczytać tego pliku"
+invalidYAML:
+  value: "nieprawidłowy YAML"
+badPath:
+  value: "nie udało się ustalić prefiksu kluczy dla tego pliku"
+bareValue:
+  value: "oczekiwano wiadomości lub grupy, a jest sama wartość. Zapisz ją jako `value: \"...\"`"
+duplicateKey:
+  value: "zduplikowany klucz, już zdefiniowany w {at}"
+  placeholders:
+    at: {type: string}
+valueAndPlural:
+  value: "wiadomość ma albo `value`, albo `plural`, nigdy oba naraz"
+valueNotString:
+  value: "`value` musi być tekstem"
+badPlural:
+  value: "bloku `plural` nie da się użyć"
+descriptionNotString:
+  value: "`description` musi być tekstem"
+badPlaceholders:
+  value: "bloku `placeholders` nie da się użyć"
+
+override:
+  value: "późniejszy katalog źródłowy nadpisuje wcześniejszą definicję"
+missingKey:
+  value: "brakuje w {locale}; istnieje w {base}"
+  placeholders:
+    locale: {type: string}
+    base: {type: string}
+noPluralRule:
+  value: "brak reguły liczby mnogiej dla tego języka"
+emptyTranslation:
+  value: "puste tłumaczenie; usuń klucz lub go przetłumacz"
+pluralFormMissing:
+  value: "{locale} potrzebuje formy {category}; bez niej liczby z tej kategorii po cichu dostają inną formę"
+  placeholders:
+    locale: {type: string}
+    category: {type: string}
+pluralCategoryExtra:
+  value: "{locale} nie ma kategorii {category}, więc ta forma jest nieosiągalna"
+  placeholders:
+    locale: {type: string}
+    category: {type: string}
+pluralOtherMissing:
+  value: "każda liczba mnoga potrzebuje formy \"other\""
+pluralArgumentMissing:
+  value: "plural.argument jest wymagany"
+pluralArgumentType:
+  value: "argument liczby mnogiej {name} jest zadeklarowany jako {kind}; to licznik, więc musi być liczbą całkowitą"
+  placeholders:
+    name: {type: string}
+    kind: {type: string}
+placeholderUndeclared:
+  value: "placeholder {name} jest używany, ale niezadeklarowany w placeholders"
+  placeholders:
+    name: {type: string}
+placeholderUnused:
+  value: "placeholder {name} jest zadeklarowany, ale nigdy nieużywany"
+  placeholders:
+    name: {type: string}
+goFieldCollision:
+  value: "{first} i {second} stają się w Go tym samym polem .{field}, więc jedno po cichu wygrywa"
+  placeholders:
+    first: {type: string}
+    second: {type: string}
+    field: {type: string}
+
+kindMismatch:
+  value: "rodzaj wiadomości różni się między językami"
+pluralArgumentDiffers:
+  value: "argument liczby mnogiej różni się między językami"
+placeholderMismatch:
+  value: "niezgodność placeholderów"
+placeholderTypeMismatch:
+  value: "placeholder {name} ma inny typ w różnych językach"
+  placeholders:
+    name: {type: string}
+
+labelKey:
+  value: "Klucz"
+labelSource:
+  value: "Źródło"
+labelCause:
+  value: "Przyczyna"
+labelWas:
+  value: "było"
+labelNow:
+  value: "jest"
+labelNone:
+  value: "(brak)"

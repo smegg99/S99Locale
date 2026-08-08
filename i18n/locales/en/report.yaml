@@ -1,0 +1,214 @@
+# i18n/locales/en/report.yaml
+
+buildGenerated:
+  value: "loc: {files} file(s) generated, {changed} changed"
+  description: "Printed after a successful build"
+  placeholders:
+    files: {type: integer}
+    changed: {type: integer}
+buildRemoved:
+  value: "loc: removed {path}"
+  description: "One line per file the build removed, named so nobody has to bisect for it"
+  placeholders:
+    path: {type: string}
+buildWorking:
+  value: "building locales"
+  description: "The label on the live step while build generates and writes"
+checkWorking:
+  value: "checking locales"
+  description: "The label on the live step while check generates and compares"
+checkCurrent:
+  plural:
+    argument: files
+    forms:
+      one: "loc: {files} file is current"
+      other: "loc: {files} files are current"
+  description: "Printed when check finds nothing stale"
+  placeholders:
+    files: {type: integer}
+checkStale:
+  value: "generated output is stale; run `loc build`:"
+  description: "Heading above the list of files a build would rewrite"
+checkModified:
+  value: "loc cannot prove it wrote these, so build will not touch them; remove them by hand:"
+  description: "Heading above the list of files a build refuses to touch: edited since loc wrote them, or never written by loc"
+cleanRemoved:
+  value: "loc: removed {path}"
+  description: "One line per file clean removed"
+  placeholders:
+    path: {type: string}
+cleanNothing:
+  value: "loc: nothing to clean"
+  description: "Printed when no target directory holds a build record"
+waitingForLock:
+  value: "loc: waiting for another loc run to finish"
+  description: "Printed once when another run holds a lock this one needs"
+errorsAndWarnings:
+  value: "{errors} error(s), {warnings} warning(s)"
+  description: "The count under a run's diagnostics"
+  placeholders:
+    errors: {type: integer}
+    warnings: {type: integer}
+
+watchWatching:
+  plural:
+    argument: roots
+    forms:
+      one: "loc: watching {roots} root; ctrl-c to stop"
+      other: "loc: watching {roots} roots; ctrl-c to stop"
+  description: "Printed once when watch starts"
+  placeholders:
+    roots: {type: integer}
+watchStopped:
+  value: "loc: stopped"
+  description: "Printed when watch is interrupted"
+watchFailed:
+  value: "build failed; still watching"
+  description: "Printed after a rebuild that did not succeed"
+watchOk:
+  value: "ok"
+  description: "Printed after a rebuild that did succeed"
+watchError:
+  value: "loc: watch: {error}"
+  description: "Printed when the file watcher itself reports a problem; the error is untranslated"
+  placeholders:
+    error: {type: string}
+
+statsLocales:
+  value: "locales"
+  description: "Label for the configured locales in stats"
+statsMessages:
+  value: "messages"
+  description: "Label for the message count in stats"
+statsByNamespace:
+  value: "by namespace"
+  description: "Heading over the namespace table in stats"
+statsByTarget:
+  value: "by target"
+  description: "Heading over the target table in stats"
+statsMissing:
+  value: "missing translations"
+  description: "Heading over the missing-translation table in stats"
+statsGeneratedSize:
+  value: "generated size"
+  description: "Heading over the size table in stats, one row per target"
+statsTotal:
+  value: "total"
+  description: "The last row of the size table"
+statsColumnName:
+  value: "NAME"
+  description: "First column header of every stats table"
+statsColumnCount:
+  value: "COUNT"
+  description: "Second column header of the count tables in stats"
+statsColumnSize:
+  value: "SIZE"
+  description: "Second column header of the size table in stats"
+
+lintNoShared:
+  value: "loc: no shared-message candidates"
+  description: "Printed when lint shared finds nothing"
+lintCandidates:
+  plural:
+    argument: count
+    forms:
+      one: "{count} candidate"
+      other: "{count} candidates"
+  description: "The count under lint shared's findings"
+  placeholders:
+    count: {type: integer}
+lintHidden:
+  plural:
+    argument: count
+    forms:
+      one: "{count} lower-confidence finding hidden; see `loc lint shared --verbose`"
+      other: "{count} lower-confidence findings hidden; see `loc lint shared --verbose`"
+  description: "Printed by lint shared when it filtered something out, whether or not it showed a candidate"
+  placeholders:
+    count: {type: integer}
+lintNoDuplicates:
+  value: "loc: no duplicate contracts"
+  description: "Printed when lint duplicates finds nothing"
+lintDuplicates:
+  plural:
+    argument: count
+    forms:
+      one: "{count} duplicate contract"
+      other: "{count} duplicate contracts"
+  description: "The count under lint duplicates' findings"
+  placeholders:
+    count: {type: integer}
+lintScanned:
+  value: "scanned {files} file(s) in {roots} root(s)"
+  description: "Printed by lint keys before its findings"
+  placeholders:
+    files: {type: integer}
+    roots: {type: integer}
+lintNoScanRoots:
+  value: "loc: no scan roots configured; nothing to compare against"
+  description: "Printed by lint keys when scan is empty"
+lintClean:
+  value: "loc: every declared key is referenced, and every reference resolves"
+  description: "Printed by lint keys when it finds nothing"
+lintPossibleShared:
+  value: "possible shared message"
+  description: "Heading for I18N021, printed by lint shared"
+lintReferencedNotDeclared:
+  value: "referenced but not declared"
+  description: "Heading for I18N030, printed by lint keys"
+lintDeclaredNotReferenced:
+  value: "declared but not referenced"
+  description: "Heading for I18N032, printed by lint keys"
+lintDynamicHint:
+  value: "A key built at runtime looks unused. Declare it under dynamicKeys rather than deleting it."
+  description: "Printed under the I18N032 list"
+lintKeysLabel:
+  value: "Keys"
+  description: "Label in a lint shared finding"
+lintTranslationsLabel:
+  value: "Translations"
+  description: "Label in a lint shared finding"
+lintSuggestedLabel:
+  value: "Suggested key"
+  description: "Label in a lint shared finding"
+lintConfidenceLabel:
+  value: "Confidence"
+  description: "Label in a lint shared finding"
+lintConfidenceHigh:
+  value: "high"
+  description: "Confidence shown by lint shared and lint duplicates when the whole contract matches in every locale; --json keeps the stable word"
+lintConfidenceMedium:
+  value: "medium"
+  description: "Confidence shown by lint shared and lint duplicates when the text matches but the metadata or contract differs; --json keeps the stable word"
+lintConfidenceLow:
+  value: "low"
+  description: "Confidence shown by lint shared and lint duplicates when only the default locale matches, or only one locale is configured; --json keeps the stable word"
+lintReasonOneLocale:
+  value: "only one locale is configured, so matching text proves nothing"
+  description: "Shown under the confidence of a low lint shared finding when the config has one locale; --json keeps a stable code"
+lintReasonDescriptions:
+  value: "the descriptions differ, so these may be two concepts that coincide"
+  description: "Shown under the confidence of a medium lint shared finding whose keys match but whose descriptions differ; --json keeps a stable code"
+lintReasonTargets:
+  value: "the targets differ, so these are rendered by different runtimes"
+  description: "Shown under the confidence of a medium lint shared finding whose namespaces go to different targets; --json keeps a stable code"
+lintReasonContract:
+  value: "the text matches in every locale, but the placeholder or plural contract differs"
+  description: "Shown under the confidence of a medium lint shared finding whose text matches everywhere but whose contract does not; --json keeps a stable code"
+lintReasonDefaultOnly:
+  value: "only {locale} matches; the other locales differ"
+  description: "Shown under the confidence of a low lint shared finding whose text matches in the default locale only; locale is the default locale's code; --json keeps a stable code"
+  placeholders:
+    locale: {type: string}
+lintColumnKey:
+  value: "KEY"
+  description: "Column header in lint keys' tables"
+lintColumnLocation:
+  value: "LOCATION"
+  description: "Column header in lint keys' tables"
+lintColumnConfidence:
+  value: "CONFIDENCE"
+  description: "Column header in lint duplicates' table"
+lintColumnKeys:
+  value: "KEYS"
+  description: "Column header in lint duplicates' table"

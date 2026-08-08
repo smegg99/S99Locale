@@ -20,13 +20,25 @@ var scanLocales = map[string]string{
 	"pl/common.yaml": "cancel:\n  value: \"Anuluj\"\nopen:\n  value: \"Otwórz\"\n",
 }
 
-// findings references common.nope, which nobody declares, and leaves common.open unreferenced.
-const findings = "t('common.cancel')\nt('common.nope')\n"
+// findings references the undeclared common.nope and leaves common.open unreferenced.
+const findings = "cancel-nope.ts"
 
-// scanProject writes the locales, a scan root and one source file with the given body.
-func scanProject(t *testing.T, locales map[string]string, source string) string {
+// scanSource reads a fixture from testdata/scan, which loc's own scan skips.
+func scanSource(t *testing.T, name string) string {
 	t.Helper()
 
+	body, err := os.ReadFile(filepath.Join("testdata", "scan", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(body)
+}
+
+// scanProject writes the locales, a scan root and one source file holding the named fixture.
+func scanProject(t *testing.T, locales map[string]string, fixture string) string {
+	t.Helper()
+
+	source := scanSource(t, fixture)
 	path := project(t, locales)
 	if err := os.WriteFile(path, []byte(cliConfig+"scan: [\"src\"]\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -45,22 +57,22 @@ func scanProject(t *testing.T, locales map[string]string, source string) string 
 // Findings fail only under --strict; --json exits like the human form.
 func TestLintKeysFailsOnAFindingOnlyUnderStrict(t *testing.T) {
 	for _, tc := range []struct {
-		name   string
-		source string
-		strict error
+		name    string
+		fixture string
+		strict  error
 	}{
-		{"clean", "t('common.cancel')\nt('common.open')\n", nil},
-		{"unused only", "t('common.cancel')\n", errFailed},
-		{"missing only", "t('common.cancel')\nt('common.open')\nt('common.nope')\n", errFailed},
+		{"clean", "cancel-open.ts", nil},
+		{"unused only", "cancel.ts", errFailed},
+		{"missing only", "cancel-open-nope.ts", errFailed},
 		{"missing and unused", findings, errFailed},
 	} {
 		for _, asJSON := range []bool{false, true} {
-			lenient, out, _ := testApp(t, options{configPath: scanProject(t, scanLocales, tc.source)})
+			lenient, out, _ := testApp(t, options{configPath: scanProject(t, scanLocales, tc.fixture)})
 			if err := cmdLintKeys(context.Background(), lenient, asJSON); err != nil {
 				t.Errorf("%s, json=%v: failed without --strict: %v\n%s", tc.name, asJSON, err, out.String())
 			}
 
-			strict, out, _ := testApp(t, options{configPath: scanProject(t, scanLocales, tc.source), strict: true})
+			strict, out, _ := testApp(t, options{configPath: scanProject(t, scanLocales, tc.fixture), strict: true})
 			if err := cmdLintKeys(context.Background(), strict, asJSON); !errors.Is(err, tc.strict) {
 				t.Errorf("%s, json=%v: --strict = %v, want %v\n%s", tc.name, asJSON, err, tc.strict, out.String())
 			}
@@ -190,7 +202,7 @@ func TestLintKeysCountsOnlySource(t *testing.T) {
 
 	write("config.cue", backendConfig(""))
 	build("generated/backend")
-	write("src/app.ts", "t('common.cancel')\n")
+	write("src/app.ts", scanSource(t, "cancel.ts"))
 
 	// Every keys_gen.go names KeyCommonOpen, so common.open stays unused until source names it.
 	write("config.cue", backendConfig(`outputs: {backend: "src/messages"}`+"\n"))
@@ -265,7 +277,7 @@ func TestLintSharedVerboseThroughTheTree(t *testing.T) {
 
 // An interrupt after the load stops the scan walk with the reason.
 func TestLintKeysScanStopsOnACancelledContext(t *testing.T) {
-	a, out, _ := testApp(t, options{configPath: scanProject(t, onlyWarnings, "t('a.x')\n")})
+	a, out, _ := testApp(t, options{configPath: scanProject(t, onlyWarnings, "a-x.ts")})
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	// The totals line is the last thing the load prints before the scan starts.

@@ -1,0 +1,116 @@
+# i18n/locales/pl/cli.yaml
+
+rootShort:
+  value: "Kompiluj jedno kanoniczne źródło tłumaczeń do paczek dla każdego celu"
+rootLong:
+  value: "loc kompiluje kanoniczny YAML do paczek vue-i18n i go-i18n, typowanych kluczy i zapisu budowania. Wygenerowane pliki są commitowane."
+
+buildShort:
+  value: "Sprawdź i wygeneruj każdy skonfigurowany cel"
+checkShort:
+  value: "Sprawdź pliki źródłowe i potwierdź, że wygenerowane pliki są aktualne"
+checkLong:
+  value: "Nigdy nie zapisuje, dlatego to polecenie uruchamia się w CI. Kod wyjścia 1 oznacza błędne tłumaczenia lub nieaktualne pliki; kod wyjścia 2 oznacza, że loc w ogóle nie mógł działać."
+statsShort:
+  value: "Pokaż liczby według przestrzeni nazw, celu i języka oraz rozmiary paczek"
+lintShort:
+  value: "Zgłoś wiadomości, które mogą być duplikatami"
+lintLong:
+  value: "Niczego nie zmienia. Scalanie jest decyzją, a zwykłe budowanie nie jest miejscem na jej podjęcie."
+lintSharedShort:
+  value: "Znajdź klucze, które mogą należeć do wspólnej przestrzeni nazw"
+lintKeysShort:
+  value: "Znajdź nieużywane i brakujące klucze, skanując kod źródłowy"
+lintDuplicatesShort:
+  value: "Znajdź dokładne duplikaty kontraktów, niezależnie od nazwy"
+watchShort:
+  value: "Przebudowuj po każdej zmianie, aż do przerwania"
+watchLong:
+  value: "Nie zatrzymuje się na błędzie walidacji i obserwuje dalej: klucz w połowie napisany to normalny stan edytowanego pliku."
+cleanShort:
+  value: "Usuń wygenerowane pliki"
+helpShort:
+  value: "Pokaż pomoc dowolnego polecenia"
+helpLong:
+  value: "Pokaż pomoc dowolnego polecenia loc. Wpisz `loc help [ścieżka do polecenia]`, aby zobaczyć pełny tekst."
+completionShort:
+  value: "Wygeneruj skrypt uzupełniania poleceń dla wskazanej powłoki"
+completionLong:
+  value: "Wygeneruj skrypt uzupełniania poleceń loc. Pomoc podpolecenia każdej powłoki opisuje, jak użyć wypisanego skryptu."
+
+flagConfig:
+  value: "plik konfiguracji"
+flagQuiet:
+  value: "ukryj komunikaty o powodzeniu; diagnostyka pozostaje bez zmian"
+flagLang:
+  value: "język tego uruchomienia: --lang ma pierwszeństwo przed LOC_LANG, LC_ALL, LC_MESSAGES i LANG"
+flagColor:
+  value: "kiedy kolorować wyjście: auto, always lub never"
+flagJSON:
+  value: "wyjście czytelne maszynowo"
+flagVerbose:
+  value: "uwzględnij znaleziska o średniej i niskiej pewności"
+flagStrictBuild:
+  value: "ostrzeżenia kończą budowanie błędem"
+flagStrictCheck:
+  value: "ostrzeżenia kończą sprawdzanie błędem"
+flagStrictWatch:
+  value: "ostrzeżenia kończą przebudowanie błędem"
+flagStrictLint:
+  value: "ostrzeżenia, a w lint keys także znaleziska, kończą lint błędem"
+flagHelp:
+  value: "pokaż pomoc polecenia {command}"
+  placeholders:
+    command: {type: string}
+flagVersion:
+  value: "pokaż wersję i zakończ"
+
+headingUsage:
+  value: "Użycie:"
+headingAliases:
+  value: "Aliasy:"
+headingExamples:
+  value: "Przykłady:"
+headingCommands:
+  value: "Dostępne polecenia:"
+headingAdditionalCommands:
+  value: "Dodatkowe polecenia:"
+headingFlags:
+  value: "Opcje:"
+headingGlobalFlags:
+  value: "Opcje globalne:"
+headingHelpTopics:
+  value: "Dodatkowe tematy pomocy:"
+headingMoreInfo:
+  value: "Użyj \"{command} [command] --help\", aby uzyskać więcej informacji o poleceniu."
+  placeholders:
+    command: {type: string}
+
+errUnsupportedLanguage:
+  value: "nieobsługiwany język {lang}; loc obsługuje: {supported}"
+  placeholders:
+    lang: {type: string}
+    supported: {type: string}
+errNoArgs:
+  value: "polecenie {command} nie przyjmuje argumentów"
+  placeholders:
+    command: {type: string}
+errUnknownColor:
+  value: "nieznana wartość {value} dla --color; użyj auto, always lub never"
+  placeholders:
+    value: {type: string}
+
+statusOk:
+  value: "ok"
+statusFailed:
+  value: "błąd"
+statusSkipped:
+  value: "pominięto"
+statusWaiting:
+  value: "oczekiwanie"
+statusRunning:
+  value: "w toku"
+statusWarning:
+  value: "ostrzeżenie"
+statusStale:
+  value: "nieaktualne"

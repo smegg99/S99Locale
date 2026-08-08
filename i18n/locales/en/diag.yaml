@@ -1,0 +1,131 @@
+# i18n/locales/en/diag.yaml
+
+fileTooLarge:
+  value: "file is {size} MB; the limit is {limit} MB. Split it into smaller files"
+  description: "I18N001, raised when a canonical file is past the size limit"
+  placeholders:
+    size: {type: integer}
+    limit: {type: integer}
+unreadable:
+  value: "could not read this file"
+  description: "I18N001, raised when the file cannot be opened; the cause is appended untranslated"
+invalidYAML:
+  value: "invalid YAML"
+  description: "I18N001, raised when the parser rejects the file; the cause is appended untranslated"
+badPath:
+  value: "could not work out this file's key prefix"
+  description: "I18N001, raised when the file's path cannot be made relative to its root"
+bareValue:
+  value: "expected a message or a group, got a bare value. Wrap it as `value: \"...\"`"
+  description: "I18N002, raised when a node is neither a message nor another level of key"
+duplicateKey:
+  value: "duplicate key, already defined at {at}"
+  description: "I18N004, raised when one root defines a key twice"
+  placeholders:
+    at: {type: string}
+valueAndPlural:
+  value: "a message is either `value` or `plural`, never both"
+  description: "I18N002, raised when a node declares both"
+valueNotString:
+  value: "`value` must be a string"
+  description: "I18N002, raised when value holds something else"
+badPlural:
+  value: "the `plural` block is not usable"
+  description: "I18N002, raised when the plural block does not parse; the cause is appended untranslated"
+descriptionNotString:
+  value: "`description` must be a string"
+  description: "I18N002, raised when description holds something else"
+badPlaceholders:
+  value: "the `placeholders` block is not usable"
+  description: "I18N002, raised when the placeholders block does not parse; the cause is appended untranslated"
+
+override:
+  value: "a later root overrides an earlier definition"
+  description: "I18N016, a warning: silently shadowing a library string leaves a UI half-translated"
+missingKey:
+  value: "missing from {locale}; it exists in {base}"
+  description: "I18N005, raised when a locale does not carry a key the default locale has"
+  placeholders:
+    locale: {type: string}
+    base: {type: string}
+noPluralRule:
+  value: "no plural rule for this locale"
+  description: "I18N009, raised when a locale has no CLDR rule loc knows; the cause is appended untranslated"
+emptyTranslation:
+  value: "empty translation; delete the key or translate it"
+  description: "I18N007, raised when a form is blank"
+pluralFormMissing:
+  value: "{locale} needs a {category} form; without it that band silently renders another case"
+  description: "I18N009, raised per required category the message does not carry"
+  placeholders:
+    locale: {type: string}
+    category: {type: string}
+pluralCategoryExtra:
+  value: "{locale} has no {category} category, so that form is unreachable"
+  description: "I18N010, raised per category the locale's rule never selects"
+  placeholders:
+    locale: {type: string}
+    category: {type: string}
+pluralOtherMissing:
+  value: "every plural needs an \"other\" form"
+  description: "I18N009, raised when the fallback band is absent"
+pluralArgumentMissing:
+  value: "plural.argument is required"
+  description: "I18N011, raised when a plural does not name its counted argument"
+pluralArgumentType:
+  value: "plural argument {name} is declared as {kind}; it counts, so it must be an integer"
+  description: "I18N018, raised when the counted argument is not an integer"
+  placeholders:
+    name: {type: string}
+    kind: {type: string}
+placeholderUndeclared:
+  value: "the placeholder {name} is used but not declared under placeholders"
+  description: "I18N012, raised when text interpolates something the message does not declare"
+  placeholders:
+    name: {type: string}
+placeholderUnused:
+  value: "the placeholder {name} is declared but never used"
+  description: "I18N013, a warning raised when a declaration reaches no text"
+  placeholders:
+    name: {type: string}
+goFieldCollision:
+  value: "{first} and {second} both become .{field} in Go, so one silently wins"
+  description: "I18N015, raised when two placeholder names differ only in casing"
+  placeholders:
+    first: {type: string}
+    second: {type: string}
+    field: {type: string}
+
+kindMismatch:
+  value: "message kind differs across locales"
+  description: "I18N008, raised when one locale has a plain message and another a plural"
+pluralArgumentDiffers:
+  value: "plural argument differs across locales"
+  description: "I18N011, raised when two locales count different placeholders"
+placeholderMismatch:
+  value: "placeholder mismatch"
+  description: "I18N003, raised when two locales declare different placeholder sets"
+placeholderTypeMismatch:
+  value: "the placeholder {name} has a different type across locales"
+  description: "I18N014, raised when two locales disagree about a placeholder's type"
+  placeholders:
+    name: {type: string}
+
+labelKey:
+  value: "Key"
+  description: "Label under a diagnostic, naming the message it is about"
+labelSource:
+  value: "Source"
+  description: "Label under a diagnostic, naming the file and line"
+labelCause:
+  value: "Cause"
+  description: "Label under a diagnostic, introducing an untranslated parser message"
+labelWas:
+  value: "was"
+  description: "Label in the I18N016 context pair, for the definition that was shadowed"
+labelNow:
+  value: "now"
+  description: "Label in the I18N016 context pair, for the definition that won"
+labelNone:
+  value: "(none)"
+  description: "Value in the I18N003 context pair, when a locale declares no placeholders at all"
