@@ -12,6 +12,11 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/nicksnyder/go-i18n/v2/i18n"
+
+	"github.com/smegg99/s99locale/internal/catalog"
+	"github.com/smegg99/s99locale/internal/shared"
 )
 
 // scanLocales declares common.cancel and common.open; the scan source decides which are used.
@@ -288,5 +293,88 @@ func TestLintKeysScanStopsOnACancelledContext(t *testing.T) {
 	}
 	if strings.Contains(out.String(), "scanned") {
 		t.Fatalf("the scan ran to the end:\n%s", out.String())
+	}
+}
+
+// reasonText reaches each reason's entry and fills its placeholder; the compiler checks neither.
+func TestEveryLintReasonRendersInEveryLocale(t *testing.T) {
+	args := map[string]any{"locale": "en"}
+	for _, reason := range shared.Reasons() {
+		for _, locale := range catalog.Locales {
+			l := catalog.Localizer(locale)
+			id := "report.lintReason" + strings.ToUpper(string(reason[:1])) + string(reason[1:])
+			want, err := l.Localize(&i18n.LocalizeConfig{MessageID: id, TemplateData: pascal(args)})
+			if err != nil {
+				t.Errorf("%s in %s has no catalogue entry %s: %v", reason, locale, id, err)
+				continue
+			}
+
+			got := reasonText(l, shared.Candidate{Reason: reason, ReasonArgs: args})
+			switch {
+			case got == string(reason):
+				t.Errorf("%s in %s renders its own code; the switch has no case for it", reason, locale)
+			case got != want:
+				t.Errorf("%s in %s renders %q, want %q; the case calls the wrong accessor or leaves the locale unfilled", reason, locale, got, want)
+			}
+		}
+	}
+}
+
+// Every lintReason sentence has a Reason and every Reason a sentence.
+func TestTheReasonsAreTheCatalogue(t *testing.T) {
+	var sentences []string
+	for _, key := range catalogueKeys(t) {
+		if name, ok := strings.CutPrefix(key, "report.lintReason"); ok {
+			sentences = append(sentences, strings.ToLower(name[:1])+name[1:])
+		}
+	}
+	var reasons []string
+	for _, r := range shared.Reasons() {
+		reasons = append(reasons, string(r))
+	}
+
+	if extra := missingFrom(reasons, sentences); len(extra) > 0 {
+		t.Errorf("report.yaml has reasons shared.Reasons does not list: %v", extra)
+	}
+	if missing := missingFrom(sentences, reasons); len(missing) > 0 {
+		t.Errorf("shared.Reasons lists reasons report.yaml has no sentence for: %v", missing)
+	}
+}
+
+// lint shared --json keeps the reason code and locale; the human form is localized.
+func TestLintSharedReasonIsACodeInJSONAndWordsForAPerson(t *testing.T) {
+	ctx := context.Background()
+
+	a, out, data := testApp(t, options{configPath: project(t, lowConfidence)})
+	if err := cmdLintShared(ctx, a, true, true); err != nil {
+		t.Fatalf("%v\n%s", err, out.String())
+	}
+	var res struct {
+		Candidates []struct {
+			Reason     string         `json:"reason"`
+			ReasonArgs map[string]any `json:"reasonArgs"`
+		} `json:"candidates"`
+	}
+	if err := json.Unmarshal(data.Bytes(), &res); err != nil {
+		t.Fatalf("stdout is not JSON: %v\n%s", err, data.String())
+	}
+	if len(res.Candidates) != 1 {
+		t.Fatalf("candidates = %+v, want one", res.Candidates)
+	}
+	if c := res.Candidates[0]; c.Reason != string(shared.ReasonDefaultOnly) || c.ReasonArgs["locale"] != "en" {
+		t.Fatalf("candidate = %+v, want %q naming en", c, shared.ReasonDefaultOnly)
+	}
+
+	human, out, _ := testApp(t, options{configPath: project(t, lowConfidence)})
+	human.words = catalog.Localizer("pl")
+	if err := cmdLintShared(ctx, human, true, false); err != nil {
+		t.Fatalf("%v\n%s", err, out.String())
+	}
+	params := catalog.ReportLintReasonDefaultOnlyParams{Locale: "en"}
+	if want := catalog.ReportLintReasonDefaultOnly(catalog.Localizer("pl"), params); !strings.Contains(out.String(), want) {
+		t.Fatalf("no %q in:\n%s", want, out.String())
+	}
+	if english := catalog.ReportLintReasonDefaultOnly(catalog.Localizer("en"), params); strings.Contains(out.String(), english) {
+		t.Fatalf("the reason stayed English under pl:\n%s", out.String())
 	}
 }

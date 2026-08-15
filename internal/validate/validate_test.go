@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/smegg99/s99locale/internal/config"
+	"github.com/smegg99/s99locale/internal/message"
 	"github.com/smegg99/s99locale/internal/parse"
 	"github.com/smegg99/s99locale/internal/validate"
 )
@@ -50,7 +51,29 @@ roots: ["locales"]
 	if err != nil {
 		t.Fatal(err)
 	}
-	return validate.Run(cfg, res)
+	return registered(t, validate.Run(cfg, res))
+}
+
+// registered fails on a diagnostic whose key the registry lacks.
+func registered(t *testing.T, r *validate.Report) *validate.Report {
+	t.Helper()
+	for _, d := range r.Diagnostics {
+		if !slices.Contains(validate.Messages(), d.Message) {
+			t.Fatalf("%s %s raised %q, which validate.Messages does not list", d.Code, d.Key, d.Message)
+		}
+	}
+	return r
+}
+
+// withMessage is every diagnostic that carries one message key.
+func withMessage(r *validate.Report, msg string) []validate.Diagnostic {
+	var out []validate.Diagnostic
+	for _, d := range r.Diagnostics {
+		if d.Message == msg {
+			out = append(out, d)
+		}
+	}
+	return out
 }
 
 func codes(r *validate.Report) []string {
@@ -111,6 +134,9 @@ func TestMissingTranslationIsAnError(t *testing.T) {
 	if d.Locale != "pl" || d.Key != "common.greeting" {
 		t.Fatalf("diagnostic = %+v", d)
 	}
+	if d.Message != "missingKey" {
+		t.Fatalf("message = %q", d.Message)
+	}
 }
 
 func TestPlaceholderMismatchAcrossLocales(t *testing.T) {
@@ -124,13 +150,15 @@ greeting:
 `})
 
 	d := find(t, r, validate.CodePlaceholder)
-	// The diagnostic shows both sides.
-	rendered := d.String()
-	if !strings.Contains(rendered, "{name}") || !strings.Contains(rendered, "{imie}") {
-		t.Fatalf("diagnostic hides one side:\n%s", rendered)
+	if d.Message != "placeholderMismatch" {
+		t.Fatalf("message = %q", d.Message)
 	}
-	if !strings.Contains(rendered, "common.yaml") {
-		t.Fatalf("no source location:\n%s", rendered)
+	// The diagnostic shows both sides.
+	if len(d.Context) != 2 || d.Context[0].Value != "{name}" || d.Context[1].Value != "{imie}" {
+		t.Fatalf("diagnostic hides one side: %+v", d.Context)
+	}
+	if !strings.Contains(d.Source.File, "common.yaml") {
+		t.Fatalf("no source location: %+v", d.Source)
 	}
 }
 
@@ -140,8 +168,9 @@ func TestPlaceholderTypeMismatch(t *testing.T) {
 		"pl/a.yaml": "x:\n  value: \"{n}\"\n  placeholders:\n    n: {type: string}\n",
 	})
 
-	if !has(r, validate.CodeTypeMismatch) {
-		t.Fatalf("codes = %v", codes(r))
+	d := find(t, r, validate.CodeTypeMismatch)
+	if d.Message != "placeholderTypeMismatch" || d.Args["name"] != "n" {
+		t.Fatalf("diagnostic = %+v; it does not name the placeholder", d)
 	}
 }
 
@@ -151,8 +180,9 @@ func TestUndeclaredPlaceholderIsAnError(t *testing.T) {
 		"pl/a.yaml": "x:\n  value: \"Cześć {name}\"\n",
 	})
 
-	if !has(r, validate.CodeUndeclared) {
-		t.Fatalf("codes = %v", codes(r))
+	d := find(t, r, validate.CodeUndeclared)
+	if d.Message != "placeholderUndeclared" || d.Args["name"] != "name" {
+		t.Fatalf("diagnostic = %+v; it does not name the placeholder", d)
 	}
 }
 
@@ -165,8 +195,9 @@ func TestDeclaredButUnusedIsAWarning(t *testing.T) {
 	if r.HasErrors() {
 		t.Fatalf("an unused placeholder must not fail the build: %v", codes(r))
 	}
-	if !has(r, validate.CodeUnused) {
-		t.Fatalf("codes = %v", codes(r))
+	d := find(t, r, validate.CodeUnused)
+	if d.Message != "placeholderUnused" || d.Args["name"] != "name" {
+		t.Fatalf("diagnostic = %+v; it does not name the placeholder", d)
 	}
 }
 
@@ -176,8 +207,8 @@ func TestEmptyTranslationIsAnError(t *testing.T) {
 		"pl/a.yaml": "x:\n  value: \"   \"\n",
 	})
 
-	if !has(r, validate.CodeEmpty) {
-		t.Fatalf("codes = %v", codes(r))
+	if d := find(t, r, validate.CodeEmpty); d.Message != "emptyTranslation" {
+		t.Fatalf("message = %q", d.Message)
 	}
 }
 
@@ -193,7 +224,53 @@ x:
     count: {type: integer}
 `})
 
-	if !has(r, validate.CodeKindMismatch) {
-		t.Fatalf("codes = %v", codes(r))
+	if d := find(t, r, validate.CodeKindMismatch); d.Message != "kindMismatch" {
+		t.Fatalf("message = %q", d.Message)
+	}
+}
+
+// Run forwards a parse failure whole: its key, arguments and the parser's own text.
+func TestAParseFailureKeepsItsMessageArgsAndCause(t *testing.T) {
+	r := project(t, map[string]string{
+		"en/broken.yaml":     "this: [is: not: yaml\n",
+		"en/auth.yaml":       "login:\n  title:\n    value: \"from the group\"\n",
+		"en/auth/login.yaml": "title:\n  value: \"from the file\"\n",
+	})
+
+	yaml := find(t, r, validate.CodeYAML)
+	if yaml.Message != "invalidYAML" || yaml.Cause == "" {
+		t.Fatalf("diagnostic = %+v, want invalidYAML with the parser's cause", yaml)
+	}
+
+	dup := find(t, r, validate.CodeDuplicate)
+	at, _ := dup.Args["at"].(string)
+	if dup.Message != "duplicateKey" || !strings.Contains(dup.Source.File, "login.yaml") || !strings.Contains(at, "auth.yaml") {
+		t.Fatalf("diagnostic = %+v, want duplicateKey at login.yaml naming auth.yaml", dup)
+	}
+}
+
+// Only a hand-built set reaches these sites; config and parse reject them earlier.
+func TestSitesBehindConfigAndParseNameTheirMessage(t *testing.T) {
+	set := message.NewSet([]string{"en", "xx"})
+	set.Messages["en"]["a.files"] = &message.Message{
+		Key: "a.files", Locale: "en", Kind: message.KindPlural,
+		Plural: &message.Plural{Forms: map[message.Category]string{message.CatOne: "a", message.CatOther: "b"}},
+	}
+	set.Messages["xx"]["a.files"] = &message.Message{Key: "a.files", Locale: "xx", Kind: message.KindPlain, Value: "c"}
+
+	cfg := &config.Config{DefaultLocale: "en", Locales: []string{"en", "xx"}}
+	r := registered(t, validate.Run(cfg, &parse.Result{Set: set}))
+
+	for _, want := range []struct{ code, message, locale string }{
+		{validate.CodePluralArgument, "pluralArgumentMissing", "en"},
+		{validate.CodePluralMissing, "noPluralRule", "xx"},
+	} {
+		got := withMessage(r, want.message)
+		if len(got) != 1 || got[0].Code != want.code || got[0].Locale != want.locale {
+			t.Errorf("%s = %+v, want one %s in %s", want.message, got, want.code, want.locale)
+		}
+	}
+	if d := withMessage(r, "noPluralRule"); len(d) == 1 && d[0].Cause == "" {
+		t.Errorf("noPluralRule lost plural.For's cause: %+v", d[0])
 	}
 }

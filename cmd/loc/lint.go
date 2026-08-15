@@ -8,8 +8,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/spf13/cobra"
 
+	"github.com/smegg99/s99locale/internal/catalog"
 	"github.com/smegg99/s99locale/internal/config"
 	"github.com/smegg99/s99locale/internal/generate"
 	"github.com/smegg99/s99locale/internal/message"
@@ -131,7 +133,27 @@ func printCandidate(a *app, c shared.Candidate) {
 	}
 	a.warns("\n  Confidence:\n    %s\n", c.Confidence)
 	if c.Reason != "" {
-		a.warns("    %s\n", c.Reason)
+		a.warns("    %s\n", reasonText(a.say(), c))
+	}
+}
+
+// reasonText is a downgrade's reason in words; --json keeps the code.
+func reasonText(l *i18n.Localizer, c shared.Candidate) string {
+	switch c.Reason {
+	case shared.ReasonOneLocale:
+		return catalog.ReportLintReasonOneLocale(l)
+	case shared.ReasonDescriptions:
+		return catalog.ReportLintReasonDescriptions(l)
+	case shared.ReasonTargets:
+		return catalog.ReportLintReasonTargets(l)
+	case shared.ReasonContract:
+		return catalog.ReportLintReasonContract(l)
+	case shared.ReasonDefaultOnly:
+		return catalog.ReportLintReasonDefaultOnly(l, catalog.ReportLintReasonDefaultOnlyParams{
+			Locale: argString(c.ReasonArgs, "locale")})
+	default:
+		// Unmapped: print the raw code; lint_test.go fails on it.
+		return string(c.Reason)
 	}
 }
 

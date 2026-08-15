@@ -42,18 +42,27 @@ const (
 	CodeDuplicate = "I18N004" // duplicate fully qualified key
 )
 
+// Error is one parse failure; a third-party parser's own text goes in Cause.
 type Error struct {
-	Code   string
-	Source message.Source
-	Key    string
-	Detail string
+	Code    string
+	Message string
+	Args    map[string]any
+	Cause   string
+	Source  message.Source
+	Key     string
 }
 
+// Error names the message key; the sentence lives in the catalogue.
 func (e Error) Error() string {
-	if e.Key == "" {
-		return fmt.Sprintf("%s %s: %s", e.Code, e.Source, e.Detail)
+	parts := []string{e.Code, e.Source.String()}
+	if e.Key != "" {
+		parts = append(parts, e.Key)
 	}
-	return fmt.Sprintf("%s %s: %s: %s", e.Code, e.Source, e.Key, e.Detail)
+	parts = append(parts, e.Message)
+	if e.Cause != "" {
+		parts = append(parts, e.Cause)
+	}
+	return strings.Join(parts, ": ")
 }
 
 // Roots parses every root in order. Later roots override earlier ones.
@@ -140,8 +149,8 @@ func parseFile(res *Result, dir, file, locale string, root int) {
 	if info, err := os.Stat(file); err == nil && info.Size() > MaxFileSize {
 		res.Errors = append(res.Errors, Error{
 			Code: CodeYAML, Source: message.Source{File: file},
-			Detail: fmt.Sprintf("file is %d MB; the limit is %d MB. Split it into smaller files",
-				info.Size()>>20, MaxFileSize>>20),
+			Message: "fileTooLarge",
+			Args:    map[string]any{"size": int(info.Size() >> 20), "limit": MaxFileSize >> 20},
 		})
 		return
 	}
@@ -150,7 +159,7 @@ func parseFile(res *Result, dir, file, locale string, root int) {
 	if err != nil {
 		res.Errors = append(res.Errors, Error{
 			Code: CodeYAML, Source: message.Source{File: file},
-			Detail: err.Error(),
+			Message: "unreadable", Cause: err.Error(),
 		})
 		return
 	}
@@ -159,7 +168,7 @@ func parseFile(res *Result, dir, file, locale string, root int) {
 	if err := yaml.Unmarshal(raw, &doc); err != nil {
 		res.Errors = append(res.Errors, Error{
 			Code: CodeYAML, Source: message.Source{File: file},
-			Detail: "invalid YAML: " + err.Error(),
+			Message: "invalidYAML", Cause: err.Error(),
 		})
 		return
 	}
@@ -167,7 +176,8 @@ func parseFile(res *Result, dir, file, locale string, root int) {
 	pre, err := prefix(dir, file)
 	if err != nil {
 		res.Errors = append(res.Errors, Error{
-			Code: CodeYAML, Source: message.Source{File: file}, Detail: err.Error(),
+			Code: CodeYAML, Source: message.Source{File: file},
+			Message: "badPath", Cause: err.Error(),
 		})
 		return
 	}
@@ -190,7 +200,7 @@ func walk(res *Result, node map[string]any, prefix, path, file, locale string, r
 		if !ok {
 			res.Errors = append(res.Errors, Error{
 				Code: CodeSchema, Source: lines.of(here, file), Key: key,
-				Detail: "expected a message or a group, got a bare value. Wrap it as `value: \"...\"`",
+				Message: "bareValue",
 			})
 			continue
 		}
@@ -218,7 +228,8 @@ func record(res *Result, m *message.Message, locale string) {
 		} else {
 			res.Errors = append(res.Errors, Error{
 				Code: CodeDuplicate, Source: m.Source, Key: m.Key,
-				Detail: "duplicate key, already defined at " + prev.Source.String(),
+				Message: "duplicateKey",
+				Args:    map[string]any{"at": prev.Source.String()},
 			})
 			return
 		}

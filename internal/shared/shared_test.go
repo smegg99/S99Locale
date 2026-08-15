@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/smegg99/s99locale/internal/config"
@@ -52,7 +51,15 @@ func detect(t *testing.T, files map[string]string) []shared.Candidate {
 	for _, e := range res.Errors {
 		t.Fatalf("fixture does not parse: %v", e)
 	}
-	return shared.Detect(cfg, res.Set)
+
+	got := shared.Detect(cfg, res.Set)
+	// A reason missing from Reasons has no words in cmd/loc.
+	for _, c := range got {
+		if c.Reason != "" && !slices.Contains(shared.Reasons(), c.Reason) {
+			t.Fatalf("%v carries %q, which shared.Reasons does not list", c.Keys, c.Reason)
+		}
+	}
+	return got
 }
 
 func find(t *testing.T, got []shared.Candidate, keys ...string) shared.Candidate {
@@ -136,6 +143,10 @@ func TestSameEnglishDifferentPolishIsNotHighConfidence(t *testing.T) {
 	if c.Suggested != "" {
 		t.Fatalf("suggested %q for a low-confidence group", c.Suggested)
 	}
+	// The code and its locale travel apart, so cmd/loc can render it in any language.
+	if c.Reason != shared.ReasonDefaultOnly || c.ReasonArgs["locale"] != "en" {
+		t.Fatalf("reason = %q %v, want %q naming en", c.Reason, c.ReasonArgs, shared.ReasonDefaultOnly)
+	}
 }
 
 func TestDifferentPlaceholdersAreNotDuplicates(t *testing.T) {
@@ -154,8 +165,8 @@ func TestDifferentPlaceholdersAreNotDuplicates(t *testing.T) {
 	if c.Suggested != "" {
 		t.Fatalf("suggested %q for a group with differing contracts", c.Suggested)
 	}
-	if !strings.Contains(c.Reason, "contract") {
-		t.Fatalf("reason does not say why: %q", c.Reason)
+	if c.Reason != shared.ReasonContract || c.ReasonArgs != nil {
+		t.Fatalf("reason = %q %v, want %q", c.Reason, c.ReasonArgs, shared.ReasonContract)
 	}
 }
 
@@ -199,7 +210,7 @@ func TestDifferentDescriptionsDowngradeToMedium(t *testing.T) {
 	if c.Confidence != shared.Medium {
 		t.Fatalf("confidence = %s, want medium", c.Confidence)
 	}
-	if c.Reason == "" {
-		t.Fatal("a downgrade with no reason is not actionable")
+	if c.Reason != shared.ReasonDescriptions {
+		t.Fatalf("reason = %q, want %q; a downgrade with no reason is not actionable", c.Reason, shared.ReasonDescriptions)
 	}
 }

@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/nicksnyder/go-i18n/v2/i18n"
+
+	"github.com/smegg99/s99locale/internal/catalog"
 	"github.com/smegg99/s99locale/internal/validate"
 )
 
@@ -17,10 +20,20 @@ type app struct {
 	// data carries machine-readable output only: --json. main sets it to stdout.
 	data io.Writer
 	opts options
+	// words is the localizer every command renders through.
+	words *i18n.Localizer
 }
 
 func newApp(out, data io.Writer) *app {
 	return &app{out: out, data: data, opts: defaultOptions()}
+}
+
+// say is the localizer in use, the default locale's until another is picked.
+func (a *app) say() *i18n.Localizer {
+	if a.words == nil {
+		a.words = catalog.Localizer(catalog.DefaultLocale)
+	}
+	return a.words
 }
 
 // says prints a line that says a run went fine, unless --quiet.
@@ -36,14 +49,16 @@ func (a *app) warns(format string, args ...any) {
 	fmt.Fprintf(a.out, format, args...)
 }
 
+// printReport ends each diagnostic in a blank line, separating it from the next and the totals.
 func (a *app) printReport(r *validate.Report) {
 	for _, d := range r.Diagnostics {
-		a.warns("%s\n", d.String())
+		a.warns("%s\n", a.renderDiagnostic(d))
 	}
 
 	errs, warns := len(r.Errors()), len(r.Warnings())
 	if errs+warns > 0 {
-		a.warns("%d error(s), %d warning(s)\n", errs, warns)
+		a.warns("%s\n", catalog.ReportErrorsAndWarnings(a.say(), catalog.ReportErrorsAndWarningsParams{
+			Errors: errs, Warnings: warns}))
 	}
 }
 

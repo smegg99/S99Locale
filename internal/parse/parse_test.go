@@ -6,10 +6,12 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/smegg99/s99locale/internal/message"
 	"github.com/smegg99/s99locale/internal/parse"
+	"github.com/smegg99/s99locale/internal/validate"
 )
 
 // root writes a locale tree and returns its path; files maps relative path to contents.
@@ -34,9 +36,20 @@ func parseOne(t *testing.T, files map[string]string, locales ...string) *parse.R
 	if len(locales) == 0 {
 		locales = []string{"en"}
 	}
-	res, err := parse.Roots(context.Background(), []string{root(t, files)}, locales)
+	return roots(t, []string{root(t, files)}, locales)
+}
+
+// roots parses and fails on an error whose key the registry lacks.
+func roots(t *testing.T, dirs, locales []string) *parse.Result {
+	t.Helper()
+	res, err := parse.Roots(context.Background(), dirs, locales)
 	if err != nil {
 		t.Fatal(err)
+	}
+	for _, e := range res.Errors {
+		if !slices.Contains(validate.Messages(), e.Message) {
+			t.Fatalf("%s %s raised %q, which validate.Messages does not list", e.Code, e.Key, e.Message)
+		}
 	}
 	return res
 }

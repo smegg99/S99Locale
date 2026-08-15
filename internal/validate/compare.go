@@ -13,9 +13,8 @@ import (
 func compare(r *Report, ref, m *message.Message, base string) {
 	if ref.Kind != m.Kind {
 		r.add(Diagnostic{
-			Code: CodeKindMismatch, Severity: SevError, Key: m.Key, Locale: m.Locale,
-			Source: m.Source,
-			Detail: "message kind differs across locales",
+			Code: CodeKindMismatch, Severity: SevError, Message: "kindMismatch",
+			Key: m.Key, Locale: m.Locale, Source: m.Source,
 			Context: []Pair{
 				{Label: base, Value: string(ref.Kind)},
 				{Label: m.Locale, Value: string(m.Kind)},
@@ -29,9 +28,8 @@ func compare(r *Report, ref, m *message.Message, base string) {
 
 	if m.Kind == message.KindPlural && ref.Plural.Argument != m.Plural.Argument {
 		r.add(Diagnostic{
-			Code: CodePluralArgument, Severity: SevError, Key: m.Key, Locale: m.Locale,
-			Source: m.Source,
-			Detail: "plural argument differs across locales",
+			Code: CodePluralArgument, Severity: SevError, Message: "pluralArgumentDiffers",
+			Key: m.Key, Locale: m.Locale, Source: m.Source,
 			Context: []Pair{
 				{Label: base, Value: "{" + ref.Plural.Argument + "}"},
 				{Label: m.Locale, Value: "{" + m.Plural.Argument + "}"},
@@ -48,12 +46,11 @@ func comparePlaceholderSets(r *Report, ref, m *message.Message, base string) {
 	}
 
 	r.add(Diagnostic{
-		Code: CodePlaceholder, Severity: SevError, Key: m.Key, Locale: m.Locale,
-		Source: m.Source,
-		Detail: "placeholder mismatch",
+		Code: CodePlaceholder, Severity: SevError, Message: "placeholderMismatch",
+		Key: m.Key, Locale: m.Locale, Source: m.Source,
 		Context: []Pair{
-			{Label: base, Value: render(want)},
-			{Label: m.Locale, Value: render(got)},
+			placeholderPair(base, want),
+			placeholderPair(m.Locale, got),
 		},
 	})
 }
@@ -65,9 +62,9 @@ func comparePlaceholderTypes(r *Report, ref, m *message.Message, base string) {
 			continue
 		}
 		r.add(Diagnostic{
-			Code: CodeTypeMismatch, Severity: SevError, Key: m.Key, Locale: m.Locale,
-			Source: m.Source,
-			Detail: "placeholder " + p.Name + " has a different type across locales",
+			Code: CodeTypeMismatch, Severity: SevError, Message: "placeholderTypeMismatch",
+			Args: map[string]any{"name": p.Name},
+			Key:  m.Key, Locale: m.Locale, Source: m.Source,
 			Context: []Pair{
 				{Label: base, Value: string(p.Type)},
 				{Label: m.Locale, Value: string(other.Type)},
@@ -84,11 +81,12 @@ func declaredNames(m *message.Message) []string {
 	return out
 }
 
-func render(names []string) string {
+// placeholderPair is one locale's declared placeholder set; an empty set travels as a key.
+func placeholderPair(locale string, names []string) Pair {
 	if len(names) == 0 {
-		return "(none)"
+		return Pair{Label: locale, ValueKey: "labelNone"}
 	}
-	return "{" + strings.Join(names, "} {") + "}"
+	return Pair{Label: locale, Value: "{" + strings.Join(names, "} {") + "}"}
 }
 
 func sortedSet(in map[string]struct{}) []string {

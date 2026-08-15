@@ -16,16 +16,18 @@ func Run(cfg *config.Config, res *parse.Result) *Report {
 	r := &Report{}
 
 	for _, e := range res.Errors {
-		r.errorf(e.Code, e.Key, "", e.Source, "%s", e.Detail)
+		r.add(Diagnostic{
+			Code: e.Code, Severity: SevError, Message: e.Message, Args: e.Args,
+			Cause: e.Cause, Key: e.Key, Source: e.Source,
+		})
 	}
 	for _, o := range res.Overrides {
 		r.add(Diagnostic{
-			Code: CodeOverride, Severity: SevWarning, Key: o.Key, Locale: o.Locale,
-			Source: o.To,
-			Detail: "a later root overrides an earlier definition",
+			Code: CodeOverride, Severity: SevWarning, Message: "override",
+			Key: o.Key, Locale: o.Locale, Source: o.To,
 			Context: []Pair{
-				{Label: "was", Value: o.From.String()},
-				{Label: "now", Value: o.To.String()},
+				{LabelKey: "labelWas", Value: o.From.String()},
+				{LabelKey: "labelNow", Value: o.To.String()},
 			},
 		})
 	}
@@ -48,8 +50,8 @@ func checkKey(r *Report, cfg *config.Config, set *message.Set, key, base string)
 			if hasRef {
 				src = ref.Source
 			}
-			r.errorf(CodeMissingKey, key, locale, src,
-				"missing from %s; it exists in %s", locale, base)
+			r.errorAt(CodeMissingKey, "missingKey", key, locale, src,
+				map[string]any{"locale": locale, "base": base})
 			continue
 		}
 		checkOne(r, cfg, m)
@@ -64,14 +66,16 @@ func checkKey(r *Report, cfg *config.Config, set *message.Set, key, base string)
 func checkOne(r *Report, cfg *config.Config, m *message.Message) {
 	rule, err := plural.For(m.Locale)
 	if err != nil {
-		r.errorf(CodePluralMissing, m.Key, m.Locale, m.Source, "%s", err.Error())
+		r.add(Diagnostic{
+			Code: CodePluralMissing, Severity: SevError, Message: "noPluralRule",
+			Cause: err.Error(), Key: m.Key, Locale: m.Locale, Source: m.Source,
+		})
 		return
 	}
 
 	for _, text := range m.Text() {
 		if strings.TrimSpace(text) == "" {
-			r.errorf(CodeEmpty, m.Key, m.Locale, m.Source,
-				"empty translation; delete the key or translate it")
+			r.errorAt(CodeEmpty, "emptyTranslation", m.Key, m.Locale, m.Source, nil)
 		}
 	}
 
@@ -83,30 +87,26 @@ func checkOne(r *Report, cfg *config.Config, m *message.Message) {
 
 func checkPlural(r *Report, m *message.Message, rule plural.Rule) {
 	for _, c := range rule.Missing(m.Plural) {
-		r.errorf(CodePluralMissing, m.Key, m.Locale, m.Source,
-			"%s needs a %q form; without it that band silently renders another case",
-			m.Locale, c)
+		r.errorAt(CodePluralMissing, "pluralFormMissing", m.Key, m.Locale, m.Source,
+			map[string]any{"locale": m.Locale, "category": string(c)})
 	}
 	for _, c := range rule.Extra(m.Plural) {
-		r.errorf(CodePluralExtra, m.Key, m.Locale, m.Source,
-			"%s has no %q category, so that form is unreachable", m.Locale, c)
+		r.errorAt(CodePluralExtra, "pluralCategoryExtra", m.Key, m.Locale, m.Source,
+			map[string]any{"locale": m.Locale, "category": string(c)})
 	}
 
 	if _, ok := m.Plural.Forms[message.CatOther]; !ok {
-		r.errorf(CodePluralMissing, m.Key, m.Locale, m.Source,
-			"every plural needs an \"other\" form")
+		r.errorAt(CodePluralMissing, "pluralOtherMissing", m.Key, m.Locale, m.Source, nil)
 	}
 	if m.Plural.Argument == "" {
-		r.errorf(CodePluralArgument, m.Key, m.Locale, m.Source,
-			"plural.argument is required")
+		r.errorAt(CodePluralArgument, "pluralArgumentMissing", m.Key, m.Locale, m.Source, nil)
 		return
 	}
 
 	// Generated Go passes this to go-i18n's int PluralCount; another type does not compile.
 	if p, ok := m.Placeholders[m.Plural.Argument]; ok && p.Type != message.TypeInteger {
-		r.errorf(CodePluralArgType, m.Key, m.Locale, m.Source,
-			"plural argument %q is declared as %s; it counts, so it must be an integer",
-			p.Name, p.Type)
+		r.errorAt(CodePluralArgType, "pluralArgumentType", m.Key, m.Locale, m.Source,
+			map[string]any{"name": p.Name, "kind": string(p.Type)})
 	}
 }
 
@@ -125,14 +125,14 @@ func checkPlaceholders(r *Report, m *message.Message) {
 
 	for _, name := range sortedSet(used) {
 		if _, ok := m.Placeholders[name]; !ok {
-			r.errorf(CodeUndeclared, m.Key, m.Locale, m.Source,
-				"{%s} is used but not declared under placeholders", name)
+			r.errorAt(CodeUndeclared, "placeholderUndeclared", m.Key, m.Locale, m.Source,
+				map[string]any{"name": name})
 		}
 	}
 	for _, p := range message.SortedPlaceholders(m.Placeholders) {
 		if _, ok := used[p.Name]; !ok {
-			r.warnf(CodeUnused, m.Key, m.Locale, m.Source,
-				"placeholder %q is declared but never used", p.Name)
+			r.warnAt(CodeUnused, "placeholderUnused", m.Key, m.Locale, m.Source,
+				map[string]any{"name": p.Name})
 		}
 	}
 
@@ -145,8 +145,8 @@ func checkGoCollisions(r *Report, m *message.Message) {
 	for _, p := range message.SortedPlaceholders(m.Placeholders) {
 		field := GoField(p.Name)
 		if other, dup := seen[field]; dup {
-			r.errorf(CodeGoCollision, m.Key, m.Locale, m.Source,
-				"{%s} and {%s} both become .%s in Go", other, p.Name, field)
+			r.errorAt(CodeGoCollision, "goFieldCollision", m.Key, m.Locale, m.Source,
+				map[string]any{"first": other, "second": p.Name, "field": field})
 			continue
 		}
 		seen[field] = p.Name

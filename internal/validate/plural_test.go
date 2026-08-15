@@ -4,7 +4,6 @@ package validate_test
 
 import (
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/smegg99/s99locale/internal/validate"
@@ -34,15 +33,16 @@ files:
 	if d.Locale != "pl" {
 		t.Fatalf("wrong locale flagged: %+v", d)
 	}
-	// few and many are both absent.
-	count := 0
-	for _, x := range r.Diagnostics {
-		if x.Code == validate.CodePluralMissing {
-			count++
+	// few and many are both absent, and each error names its band.
+	var bands []any
+	for _, x := range withMessage(r, "pluralFormMissing") {
+		if x.Args["locale"] != "pl" {
+			t.Fatalf("diagnostic = %+v; it does not name pl", x)
 		}
+		bands = append(bands, x.Args["category"])
 	}
-	if count != 2 {
-		t.Fatalf("%d missing-band errors, want few and many", count)
+	if !slices.Equal(bands, []any{"few", "many"}) {
+		t.Fatalf("missing bands = %v, want few and many", bands)
 	}
 }
 
@@ -69,6 +69,9 @@ files:
 	if d.Locale != "en" {
 		t.Fatalf("English few should be unreachable, got %+v", d)
 	}
+	if d.Message != "pluralCategoryExtra" || d.Args["locale"] != "en" || d.Args["category"] != "few" {
+		t.Fatalf("diagnostic = %+v; it does not name en and few", d)
+	}
 }
 
 func TestPluralArgumentMustMatchAcrossLocales(t *testing.T) {
@@ -90,8 +93,8 @@ files:
     n: {type: integer}
 `})
 
-	if !has(r, validate.CodePluralArgument) {
-		t.Fatalf("codes = %v", codes(r))
+	if d := find(t, r, validate.CodePluralArgument); d.Message != "pluralArgumentDiffers" {
+		t.Fatalf("message = %q", d.Message)
 	}
 }
 
@@ -103,8 +106,8 @@ func TestGoFieldCollision(t *testing.T) {
 	r := project(t, map[string]string{"en/a.yaml": body, "pl/a.yaml": body})
 
 	d := find(t, r, validate.CodeGoCollision)
-	if !strings.Contains(d.Detail, "UserId") {
-		t.Fatalf("detail does not name the field: %q", d.Detail)
+	if d.Message != "goFieldCollision" || d.Args["first"] != "userId" || d.Args["second"] != "user_id" || d.Args["field"] != "UserId" {
+		t.Fatalf("diagnostic = %+v; it does not name the field", d)
 	}
 }
 
@@ -150,8 +153,9 @@ files:
 	r := project(t, map[string]string{"en/a.yaml": body, "pl/a.yaml": body})
 
 	d := find(t, r, validate.CodePluralArgType)
-	if !strings.Contains(d.Detail, "must be an integer") {
-		t.Fatalf("detail = %q", d.Detail)
+	// kind compares against a plain string: a message.PlaceholderType in Args renders empty.
+	if d.Message != "pluralArgumentType" || d.Args["name"] != "count" || d.Args["kind"] != "string" {
+		t.Fatalf("diagnostic = %+v; it does not name the argument and its type", d)
 	}
 }
 

@@ -456,4 +456,18 @@ func TestCheckJSONCarriesDiagnostics(t *testing.T) {
 	if d.Code != "I18N005" || d.Severity != "error" || d.Source.File == "" {
 		t.Fatalf("diagnostic = %+v", d)
 	}
+	// JSON carries the catalogue key and arguments, not the sentence.
+	if d.Message != "missingKey" || d.Args["locale"] != "pl" || d.Args["base"] != "en" {
+		t.Fatalf("diagnostic = %+v, want missingKey with its locales", d)
+	}
+
+	var raw struct {
+		Diagnostics []map[string]json.RawMessage `json:"diagnostics"`
+	}
+	if err := json.Unmarshal(data.Bytes(), &raw); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := raw.Diagnostics[0]["detail"]; ok {
+		t.Fatalf("a rendered sentence reached JSON:\n%s", data.String())
+	}
 }

@@ -8,9 +8,7 @@
 package validate
 
 import (
-	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/smegg99/s99locale/internal/message"
 	"github.com/smegg99/s99locale/internal/parse"
@@ -44,38 +42,36 @@ const (
 	CodeGoCollision    = "I18N015" // two placeholders collide once PascalCased
 	CodeOverride       = "I18N016" // a later root shadowed an earlier one
 	CodePluralArgType  = "I18N018" // plural argument is not an integer
+
+	// Printed by lint's formatters, never raised as a Diagnostic, so Messages has no key for them.
+	CodePossibleShared        = "I18N021" // keys that may be one message
+	CodeReferencedNotDeclared = "I18N030" // a reference with no declaration
+	CodeDeclaredNotReferenced = "I18N032" // a declaration with no reference
 )
 
+// Diagnostic is one finding: a message key and typed arguments, never a sentence.
 type Diagnostic struct {
-	Code     string         `json:"code"`
-	Severity Severity       `json:"severity"`
-	Key      string         `json:"key,omitempty"`
-	Locale   string         `json:"locale,omitempty"`
-	Source   message.Source `json:"source"`
-	Detail   string         `json:"detail"`
-	// Context is rendered under the message as label/value pairs, in order.
+	Code     string   `json:"code"`
+	Severity Severity `json:"severity"`
+	// Message is a diag key named after the site that raised it; one code has several sites.
+	Message string `json:"message"`
+	// Args are the sentence's placeholders, still typed.
+	Args map[string]any `json:"args,omitempty"`
+	// Cause is a third-party parser's own text, kept untranslated.
+	Cause  string         `json:"cause,omitempty"`
+	Key    string         `json:"key,omitempty"`
+	Locale string         `json:"locale,omitempty"`
+	Source message.Source `json:"source"`
+	// Context is rendered under the sentence as label/value pairs, in order.
 	Context []Pair `json:"context,omitempty"`
 }
 
+// Pair is one context line under a diagnostic; a word travels as a key, a locale code as data.
 type Pair struct {
-	Label string `json:"label"`
-	Value string `json:"value"`
-}
-
-func (d Diagnostic) String() string {
-	var b strings.Builder
-
-	fmt.Fprintf(&b, "%s %s\n", d.Code, d.Detail)
-	if d.Key != "" {
-		fmt.Fprintf(&b, "\n  Key:     %s\n", d.Key)
-	}
-	for _, p := range d.Context {
-		fmt.Fprintf(&b, "  %-8s %s\n", p.Label+":", p.Value)
-	}
-	if d.Source.File != "" {
-		fmt.Fprintf(&b, "  Source:  %s\n", d.Source)
-	}
-	return b.String()
+	Label    string `json:"label,omitempty"`
+	LabelKey string `json:"labelKey,omitempty"`
+	Value    string `json:"value,omitempty"`
+	ValueKey string `json:"valueKey,omitempty"`
 }
 
 // Report is everything one run found.
@@ -85,17 +81,17 @@ type Report struct {
 
 func (r *Report) add(d Diagnostic) { r.Diagnostics = append(r.Diagnostics, d) }
 
-func (r *Report) errorf(code, key, locale string, src message.Source, format string, args ...any) {
+func (r *Report) errorAt(code, msg, key, locale string, src message.Source, args map[string]any) {
 	r.add(Diagnostic{
-		Code: code, Severity: SevError, Key: key, Locale: locale,
-		Source: src, Detail: fmt.Sprintf(format, args...),
+		Code: code, Severity: SevError, Message: msg, Args: args,
+		Key: key, Locale: locale, Source: src,
 	})
 }
 
-func (r *Report) warnf(code, key, locale string, src message.Source, format string, args ...any) {
+func (r *Report) warnAt(code, msg, key, locale string, src message.Source, args map[string]any) {
 	r.add(Diagnostic{
-		Code: code, Severity: SevWarning, Key: key, Locale: locale,
-		Source: src, Detail: fmt.Sprintf(format, args...),
+		Code: code, Severity: SevWarning, Message: msg, Args: args,
+		Key: key, Locale: locale, Source: src,
 	})
 }
 

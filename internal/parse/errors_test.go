@@ -3,7 +3,6 @@
 package parse_test
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,6 +20,9 @@ func TestInvalidYAMLIsReportedNotFatal(t *testing.T) {
 	if len(res.Errors) != 1 || res.Errors[0].Code != "I18N001" {
 		t.Fatalf("errors = %v, want one I18N001", res.Errors)
 	}
+	if e := res.Errors[0]; e.Message != "invalidYAML" || e.Cause == "" {
+		t.Fatalf("error = %+v, want invalidYAML with the parser's cause", e)
+	}
 	// The good file still parsed: one bad file must not hide the rest.
 	mustGet(t, res, "en", "fine.ok")
 }
@@ -33,8 +35,8 @@ func TestBareValueIsRejectedWithAdvice(t *testing.T) {
 	if len(res.Errors) != 1 {
 		t.Fatalf("errors = %v, want one", res.Errors)
 	}
-	if !strings.Contains(res.Errors[0].Detail, "value:") {
-		t.Fatalf("detail gives no fix: %q", res.Errors[0].Detail)
+	if res.Errors[0].Message != "bareValue" {
+		t.Fatalf("message = %q", res.Errors[0].Message)
 	}
 }
 
@@ -47,7 +49,7 @@ both:
     argument: count
     forms: {other: "y"}
 `})
-	if len(res.Errors) != 1 || !strings.Contains(res.Errors[0].Detail, "never both") {
+	if len(res.Errors) != 1 || res.Errors[0].Message != "valueAndPlural" {
 		t.Fatalf("errors = %v", res.Errors)
 	}
 }
@@ -61,9 +63,39 @@ bad:
     forms: {several: "x"}
 `})
 
-	if len(res.Errors) != 1 {
-		t.Fatalf("errors = %v, want one", res.Errors)
+	if len(res.Errors) != 1 || res.Errors[0].Message != "badPlural" || res.Errors[0].Cause == "" {
+		t.Fatalf("errors = %v, want one badPlural with its cause", res.Errors)
 	}
+}
+
+// Six failures share I18N002, so each has to name its own sentence.
+func TestEachSchemaFailureNamesItsMessage(t *testing.T) {
+	for want, body := range map[string]string{
+		"valueNotString":       "x:\n  value: 3\n",
+		"descriptionNotString": "x:\n  value: \"a\"\n  description: 3\n",
+		"badPlaceholders":      "x:\n  value: \"a\"\n  placeholders: \"a\"\n",
+	} {
+		t.Run(want, func(t *testing.T) {
+			res := parseOne(t, map[string]string{"en/a.yaml": body})
+			if len(res.Errors) != 1 || res.Errors[0].Code != parse.CodeSchema || res.Errors[0].Message != want {
+				t.Fatalf("errors = %v, want one %s", res.Errors, want)
+			}
+		})
+	}
+}
+
+// An unreadable file is reported with the OS error, and the rest still parses.
+func TestAnUnreadableFileIsReported(t *testing.T) {
+	dir := root(t, map[string]string{"en/fine.yaml": "ok:\n  value: \"fine\"\n"})
+	if err := os.Symlink(filepath.Join(dir, "nowhere.yaml"), filepath.Join(dir, "en", "gone.yaml")); err != nil {
+		t.Fatal(err)
+	}
+
+	res := roots(t, []string{dir}, []string{"en"})
+	if len(res.Errors) != 1 || res.Errors[0].Message != "unreadable" || res.Errors[0].Cause == "" {
+		t.Fatalf("errors = %v, want one unreadable with its cause", res.Errors)
+	}
+	mustGet(t, res, "en", "fine.ok")
 }
 
 // A leaf name repeated under several sections resolves to its own line.
@@ -126,12 +158,13 @@ func TestTwoFilesReachingOneKeyIsAnError(t *testing.T) {
 	if dup == nil {
 		t.Fatalf("no duplicate reported; errors = %v, keys = %v", res.Errors, res.Set.Keys())
 	}
-	if dup.Key != "auth.login.title" {
-		t.Fatalf("key = %q", dup.Key)
+	if dup.Key != "auth.login.title" || dup.Message != "duplicateKey" {
+		t.Fatalf("error = %+v", dup)
 	}
 	// The message names where the other definition is.
-	if !strings.Contains(dup.Detail, "auth.yaml") && !strings.Contains(dup.Detail, "login.yaml") {
-		t.Fatalf("detail does not point at the other definition: %q", dup.Detail)
+	at, _ := dup.Args["at"].(string)
+	if !strings.Contains(at, "auth.yaml") && !strings.Contains(at, "login.yaml") {
+		t.Fatalf("args do not point at the other definition: %q", at)
 	}
 }
 
@@ -144,10 +177,7 @@ func TestLaterRootOverridesAndIsReported(t *testing.T) {
 		"en/common.yaml": "cancel:\n  value: \"Dismiss\"\n",
 	})
 
-	res, err := parse.Roots(context.Background(), []string{layer, app}, []string{"en"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	res := roots(t, []string{layer, app}, []string{"en"})
 	noErrors(t, res)
 
 	if got := mustGet(t, res, "en", "common.cancel").Value; got != "Dismiss" {
@@ -200,19 +230,19 @@ func TestAnOversizedFileIsReportedNotCryptic(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	res, err := parse.Roots(context.Background(), []string{dir}, []string{"en"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	res := roots(t, []string{dir}, []string{"en"})
 	if len(res.Errors) != 1 {
 		t.Fatalf("errors = %v", res.Errors)
 	}
 
-	detail := res.Errors[0].Detail
-	if !strings.Contains(detail, "the limit is") || !strings.Contains(detail, "Split it") {
-		t.Fatalf("detail = %q, want the size and what to do", detail)
+	e := res.Errors[0]
+	if e.Message != "fileTooLarge" {
+		t.Fatalf("message = %q, want fileTooLarge", e.Message)
 	}
-	if strings.Contains(detail, "token too long") {
-		t.Fatalf("still the raw scanner error: %q", detail)
+	if e.Args["limit"] != parse.MaxFileSize>>20 || e.Args["size"] != parse.MaxFileSize>>20 {
+		t.Fatalf("args = %v, want the size and the limit in MB", e.Args)
+	}
+	if strings.Contains(e.Cause, "token too long") {
+		t.Fatalf("the raw scanner error leaked into the cause: %q", e.Cause)
 	}
 }

@@ -20,24 +20,28 @@ func buildMessage(node map[string]any, key, path, locale, file string, lines lin
 		Source:       src,
 	}
 
-	fail := func(code, detail string) *Error {
-		return &Error{Code: code, Source: src, Key: key, Detail: detail}
+	fail := func(code, msg string, cause error) *Error {
+		e := &Error{Code: code, Source: src, Key: key, Message: msg}
+		if cause != nil {
+			e.Cause = cause.Error()
+		}
+		return e
 	}
 
 	if raw, ok := node["value"]; ok {
 		if _, both := node["plural"]; both {
-			return nil, fail(CodeSchema, "a message is either `value` or `plural`, never both")
+			return nil, fail(CodeSchema, "valueAndPlural", nil)
 		}
 		text, ok := raw.(string)
 		if !ok {
-			return nil, fail(CodeSchema, "`value` must be a string")
+			return nil, fail(CodeSchema, "valueNotString", nil)
 		}
 		m.Kind = message.KindPlain
 		m.Value = text
 	} else {
 		p, err := buildPlural(node["plural"])
 		if err != nil {
-			return nil, fail(CodeSchema, err.Error())
+			return nil, fail(CodeSchema, "badPlural", err)
 		}
 		m.Kind = message.KindPlural
 		m.Plural = p
@@ -46,7 +50,7 @@ func buildMessage(node map[string]any, key, path, locale, file string, lines lin
 	if raw, ok := node["description"]; ok {
 		text, ok := raw.(string)
 		if !ok {
-			return nil, fail(CodeSchema, "`description` must be a string")
+			return nil, fail(CodeSchema, "descriptionNotString", nil)
 		}
 		m.Description = text
 	}
@@ -54,7 +58,7 @@ func buildMessage(node map[string]any, key, path, locale, file string, lines lin
 	if raw, ok := node["placeholders"]; ok {
 		ph, err := buildPlaceholders(raw)
 		if err != nil {
-			return nil, fail(CodeSchema, err.Error())
+			return nil, fail(CodeSchema, "badPlaceholders", err)
 		}
 		m.Placeholders = ph
 	}

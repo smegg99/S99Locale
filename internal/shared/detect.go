@@ -21,6 +21,22 @@ const (
 	Low Confidence = "low"
 )
 
+// Reason names why a finding was downgraded; cmd/loc turns it into words.
+type Reason string
+
+const (
+	ReasonOneLocale    Reason = "oneLocale"    // one locale configured, so matching text proves nothing
+	ReasonDescriptions Reason = "descriptions" // the descriptions differ
+	ReasonTargets      Reason = "targets"      // the namespaces go to different targets
+	ReasonContract     Reason = "contract"     // the text matches everywhere, the contract does not
+	ReasonDefaultOnly  Reason = "defaultOnly"  // only the default locale matches; args carry its locale
+)
+
+// Reasons is every Reason a Candidate can carry; a test checks cmd/loc renders each.
+func Reasons() []Reason {
+	return []Reason{ReasonOneLocale, ReasonDescriptions, ReasonTargets, ReasonContract, ReasonDefaultOnly}
+}
+
 // Candidate is a group of keys that may be one message.
 type Candidate struct {
 	Keys       []string   `json:"keys"`
@@ -29,7 +45,9 @@ type Candidate struct {
 	Suggested    string            `json:"suggested,omitempty"`
 	Translations map[string]string `json:"translations"`
 	// Reason explains a downgrade.
-	Reason string `json:"reason,omitempty"`
+	Reason Reason `json:"reason,omitempty"`
+	// ReasonArgs are the reason's placeholders, still typed.
+	ReasonArgs map[string]any `json:"reasonArgs,omitempty"`
 }
 
 // Detect finds duplicate message contracts.
@@ -123,9 +141,9 @@ func confirm(group []string, prints map[string]Fingerprint) []string {
 }
 
 // grade downgrades a match whose metadata disagrees.
-func grade(cfg *config.Config, set *message.Set, group []string) (Confidence, string) {
+func grade(cfg *config.Config, set *message.Set, group []string) (Confidence, Reason) {
 	if len(cfg.Locales) < 2 {
-		return Low, "only one locale is configured, so matching text proves nothing"
+		return Low, ReasonOneLocale
 	}
 
 	base, _ := set.Get(cfg.DefaultLocale, group[0])
@@ -135,10 +153,10 @@ func grade(cfg *config.Config, set *message.Set, group []string) (Confidence, st
 			continue
 		}
 		if base.Description != other.Description {
-			return Medium, "the descriptions differ, so these may be two concepts that coincide"
+			return Medium, ReasonDescriptions
 		}
 		if !sameTargets(cfg, base, other) {
-			return Medium, "the targets differ, so these are rendered by different runtimes"
+			return Medium, ReasonTargets
 		}
 	}
 	return High, ""
@@ -200,11 +218,12 @@ func textGroups(cfg *config.Config, keys []string, prints map[string]Fingerprint
 		}
 		sort.Strings(group)
 
-		conf, reason := gradeText(cfg, group, prints)
+		conf, reason, args := gradeText(cfg, group, prints)
 		out = append(out, Candidate{
 			Keys:         group,
 			Confidence:   conf,
 			Reason:       reason,
+			ReasonArgs:   args,
 			Translations: prints[group[0]].Translations,
 		})
 	}
@@ -213,7 +232,7 @@ func textGroups(cfg *config.Config, keys []string, prints map[string]Fingerprint
 
 // gradeText separates "the same everywhere, different contract" from "the same
 // in English only".
-func gradeText(cfg *config.Config, group []string, prints map[string]Fingerprint) (Confidence, string) {
+func gradeText(cfg *config.Config, group []string, prints map[string]Fingerprint) (Confidence, Reason, map[string]any) {
 	first := prints[group[0]]
 
 	everywhere := true
@@ -226,9 +245,9 @@ func gradeText(cfg *config.Config, group []string, prints map[string]Fingerprint
 	}
 
 	if everywhere {
-		return Medium, "the text matches in every locale, but the placeholder or plural contract differs"
+		return Medium, ReasonContract, nil
 	}
-	return Low, "only " + cfg.DefaultLocale + " matches; the other locales differ"
+	return Low, ReasonDefaultOnly, map[string]any{"locale": cfg.DefaultLocale}
 }
 
 func sortedBucketKeys(m map[string][]string) []string {
