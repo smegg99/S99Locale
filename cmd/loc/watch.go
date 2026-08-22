@@ -12,8 +12,10 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/spf13/cobra"
 
+	"github.com/smegg99/s99locale/internal/catalog"
 	"github.com/smegg99/s99locale/internal/config"
 )
 
@@ -26,16 +28,19 @@ const debounce = 150 * time.Millisecond
 
 func newWatchCmd(a *app) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "watch",
-		Short: "Rebuild on every change until interrupted",
-		Long: "Survives a validation error and keeps watching: a half-typed key is\n" +
-			"the normal state of a file being edited.",
-		Args: cobra.NoArgs,
+		Use:  "watch",
+		Args: a.noArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmdWatch(cmd.Context(), a)
 		},
 	}
-	cmd.Flags().BoolVar(&a.opts.strict, "strict", false, "warnings fail the rebuild")
+	cmd.Flags().BoolVar(&a.opts.strict, "strict", false, "")
+
+	a.describe(func(l *i18n.Localizer) {
+		cmd.Short = catalog.CliWatchShort(l)
+		cmd.Long = catalog.CliWatchLong(l)
+		cmd.Flags().Lookup("strict").Usage = catalog.CliFlagStrictWatch(l)
+	})
 	return cmd
 }
 

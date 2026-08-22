@@ -12,6 +12,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/smegg99/s99locale/internal/catalog"
 )
 
 // cliConfig builds web alone, so generated/backend stands in for a retired tree.
@@ -51,7 +53,10 @@ func testApp(t *testing.T, o options) (*app, *bytes.Buffer, *bytes.Buffer) {
 	t.Helper()
 
 	out, data := &bytes.Buffer{}, &bytes.Buffer{}
-	return &app{out: out, data: data, opts: o}, out, data
+	a := &app{out: out, data: data, opts: o}
+	// English, whatever the machine running the tests has in its environment.
+	a.localize(catalog.DefaultLocale)
+	return a, out, data
 }
 
 var valid = map[string]string{

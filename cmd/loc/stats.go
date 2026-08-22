@@ -7,22 +7,26 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/spf13/cobra"
 
+	"github.com/smegg99/s99locale/internal/catalog"
 	"github.com/smegg99/s99locale/internal/config"
 	"github.com/smegg99/s99locale/internal/generate"
 	"github.com/smegg99/s99locale/internal/message"
 )
 
 func newStatsCmd(a *app) *cobra.Command {
-	return &cobra.Command{
-		Use:   "stats",
-		Short: "Counts by namespace, target and locale, plus bundle sizes",
-		Args:  cobra.NoArgs,
+	cmd := &cobra.Command{
+		Use:  "stats",
+		Args: a.noArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmdStats(cmd.Context(), a)
 		},
 	}
+
+	a.describe(func(l *i18n.Localizer) { cmd.Short = catalog.CliStatsShort(l) })
+	return cmd
 }
 
 func cmdStats(ctx context.Context, a *app) error {

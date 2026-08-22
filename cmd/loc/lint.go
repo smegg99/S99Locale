@@ -23,49 +23,54 @@ func newLintCmd(a *app) *cobra.Command {
 	var asJSON bool
 
 	cmd := &cobra.Command{
-		Use:   "lint",
-		Short: "Report messages that may be duplicates",
-		Long: "Never modifies anything. Merging is a decision, and an ordinary\n" +
-			"build is not the place to make it.",
-		Args: cobra.NoArgs,
+		Use:  "lint",
+		Args: a.noArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmdLintShared(cmd.Context(), a, false, asJSON)
 		},
 	}
 
-	cmd.PersistentFlags().BoolVar(&a.opts.strict, "strict", false, "warnings, and lint keys findings, fail the lint")
-	cmd.PersistentFlags().BoolVar(&asJSON, "json", false, "machine-readable output")
+	cmd.PersistentFlags().BoolVar(&a.opts.strict, "strict", false, "")
+	cmd.PersistentFlags().BoolVar(&asJSON, "json", false, "")
 
 	shared := &cobra.Command{
-		Use:   "shared",
-		Short: "Keys that may belong in a shared namespace",
-		Args:  cobra.NoArgs,
+		Use:  "shared",
+		Args: a.noArgs,
 	}
 	var verbose bool
-	shared.Flags().BoolVar(&verbose, "verbose", false, "include medium and low confidence findings")
+	shared.Flags().BoolVar(&verbose, "verbose", false, "")
 	shared.RunE = func(cmd *cobra.Command, _ []string) error {
 		return cmdLintShared(cmd.Context(), a, verbose, asJSON)
 	}
 
-	cmd.AddCommand(
-		shared,
-		&cobra.Command{
-			Use:   "keys",
-			Short: "Unused and missing keys, from a source scan",
-			Args:  cobra.NoArgs,
-			RunE: func(cmd *cobra.Command, _ []string) error {
-				return cmdLintKeys(cmd.Context(), a, asJSON)
-			},
+	keys := &cobra.Command{
+		Use:  "keys",
+		Args: a.noArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return cmdLintKeys(cmd.Context(), a, asJSON)
 		},
-		&cobra.Command{
-			Use:   "duplicates",
-			Short: "Exact duplicate contracts, whatever they are named",
-			Args:  cobra.NoArgs,
-			RunE: func(cmd *cobra.Command, _ []string) error {
-				return cmdLintDuplicates(cmd.Context(), a, asJSON)
-			},
+	}
+	duplicates := &cobra.Command{
+		Use:  "duplicates",
+		Args: a.noArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return cmdLintDuplicates(cmd.Context(), a, asJSON)
 		},
-	)
+	}
+
+	cmd.AddCommand(shared, keys, duplicates)
+
+	a.describe(func(l *i18n.Localizer) {
+		cmd.Short = catalog.CliLintShort(l)
+		cmd.Long = catalog.CliLintLong(l)
+		// --strict and --json are persistent here, so the lookup names PersistentFlags.
+		cmd.PersistentFlags().Lookup("strict").Usage = catalog.CliFlagStrictLint(l)
+		cmd.PersistentFlags().Lookup("json").Usage = catalog.CliFlagJSON(l)
+		shared.Short = catalog.CliLintSharedShort(l)
+		shared.Flags().Lookup("verbose").Usage = catalog.CliFlagVerbose(l)
+		keys.Short = catalog.CliLintKeysShort(l)
+		duplicates.Short = catalog.CliLintDuplicatesShort(l)
+	})
 	return cmd
 }
 

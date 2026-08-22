@@ -5,7 +5,10 @@ package main
 import (
 	"context"
 
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/spf13/cobra"
+
+	"github.com/smegg99/s99locale/internal/catalog"
 
 	"github.com/smegg99/s99locale/internal/generate"
 	"github.com/smegg99/s99locale/internal/lock"
@@ -13,14 +16,18 @@ import (
 
 func newBuildCmd(a *app) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "build",
-		Short: "Validate and generate every configured target",
-		Args:  cobra.NoArgs,
+		Use:  "build",
+		Args: a.noArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmdBuild(cmd.Context(), a)
 		},
 	}
-	cmd.Flags().BoolVar(&a.opts.strict, "strict", false, "warnings fail the build")
+	cmd.Flags().BoolVar(&a.opts.strict, "strict", false, "")
+
+	a.describe(func(l *i18n.Localizer) {
+		cmd.Short = catalog.CliBuildShort(l)
+		cmd.Flags().Lookup("strict").Usage = catalog.CliFlagStrictBuild(l)
+	})
 	return cmd
 }
 

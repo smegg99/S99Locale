@@ -22,10 +22,26 @@ type app struct {
 	opts options
 	// words is the localizer every command renders through.
 	words *i18n.Localizer
+	// language is what words renders in, for anything that has to name it.
+	language string
+	// describes are the closures that re-apply the language to the tree.
+	describes []func(*i18n.Localizer)
 }
 
 func newApp(out, data io.Writer) *app {
 	return &app{out: out, data: data, opts: defaultOptions()}
+}
+
+// describe registers a command's own strings, so a command's text lives in the command's file.
+func (a *app) describe(f func(*i18n.Localizer)) { a.describes = append(a.describes, f) }
+
+// localize re-renders every registered description, at construction and when --lang parses.
+func (a *app) localize(language string) {
+	a.language = language
+	a.words = catalog.Localizer(language)
+	for _, f := range a.describes {
+		f(a.words)
+	}
 }
 
 // say is the localizer in use, the default locale's until another is picked.

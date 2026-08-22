@@ -5,22 +5,26 @@ package main
 import (
 	"context"
 
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/spf13/cobra"
 
+	"github.com/smegg99/s99locale/internal/catalog"
 	"github.com/smegg99/s99locale/internal/config"
 	"github.com/smegg99/s99locale/internal/generate"
 	"github.com/smegg99/s99locale/internal/lock"
 )
 
 func newCleanCmd(a *app) *cobra.Command {
-	return &cobra.Command{
-		Use:   "clean",
-		Short: "Remove generated artefacts",
-		Args:  cobra.NoArgs,
+	cmd := &cobra.Command{
+		Use:  "clean",
+		Args: a.noArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmdClean(cmd.Context(), a)
 		},
 	}
+
+	a.describe(func(l *i18n.Localizer) { cmd.Short = catalog.CliCleanShort(l) })
+	return cmd
 }
 
 func cmdClean(ctx context.Context, a *app) error {

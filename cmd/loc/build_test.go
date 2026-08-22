@@ -108,6 +108,8 @@ func TestFlagsReachTheOptions(t *testing.T) {
 
 // The same flags through Execute: parsed by Cobra, read by the running command.
 func TestBuildRunsWithItsFlagsThroughTheTree(t *testing.T) {
+	pinEnglish(t)
+
 	out := &bytes.Buffer{}
 	root := rootCmd(newApp(out, &bytes.Buffer{}))
 	root.SetArgs([]string{"build", "--strict", "--quiet", "-c", project(t, onlyWarnings)})

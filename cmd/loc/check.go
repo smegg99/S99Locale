@@ -6,8 +6,10 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/spf13/cobra"
 
+	"github.com/smegg99/s99locale/internal/catalog"
 	"github.com/smegg99/s99locale/internal/generate"
 	"github.com/smegg99/s99locale/internal/lock"
 	"github.com/smegg99/s99locale/internal/validate"
@@ -28,18 +30,22 @@ func newCheckCmd(a *app) *cobra.Command {
 	var asJSON bool
 
 	cmd := &cobra.Command{
-		Use:   "check",
-		Short: "Validate and confirm the generated output is current",
-		Long: "Never writes, which is what CI runs. Exit 1 means the locales are\n" +
-			"wrong or the output is stale; exit 2 means loc could not run at all.",
-		Args: cobra.NoArgs,
+		Use:  "check",
+		Args: a.noArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmdCheck(cmd.Context(), a, asJSON)
 		},
 	}
 
-	cmd.Flags().BoolVar(&a.opts.strict, "strict", false, "warnings fail the check")
-	cmd.Flags().BoolVar(&asJSON, "json", false, "machine-readable output")
+	cmd.Flags().BoolVar(&a.opts.strict, "strict", false, "")
+	cmd.Flags().BoolVar(&asJSON, "json", false, "")
+
+	a.describe(func(l *i18n.Localizer) {
+		cmd.Short = catalog.CliCheckShort(l)
+		cmd.Long = catalog.CliCheckLong(l)
+		cmd.Flags().Lookup("strict").Usage = catalog.CliFlagStrictCheck(l)
+		cmd.Flags().Lookup("json").Usage = catalog.CliFlagJSON(l)
+	})
 
 	return cmd
 }
