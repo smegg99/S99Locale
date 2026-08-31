@@ -5,10 +5,12 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"github.com/smegg99/s99term"
 	"github.com/spf13/cobra"
 
 	"github.com/smegg99/s99locale/internal/catalog"
@@ -100,9 +102,10 @@ func cmdLintShared(ctx context.Context, a *app, verbose, asJSON bool) error {
 	}
 
 	if len(shown) == 0 {
-		a.says("loc: no shared-message candidates\n")
+		a.says(s99term.StatusOK, catalog.ReportLintNoShared(a.say()))
 		if hidden := len(all) - len(shown); hidden > 0 {
-			a.says("     %d lower-confidence finding(s); see `loc lint shared --verbose`\n", hidden)
+			a.says(s99term.StatusWarning, catalog.ReportLintHidden(a.say(), catalog.ReportLintHiddenParams{
+				Count: hidden}))
 		}
 		return nil
 	}
@@ -111,35 +114,40 @@ func cmdLintShared(ctx context.Context, a *app, verbose, asJSON bool) error {
 		printCandidate(a, c)
 	}
 
-	a.warns("%d candidate(s)\n", len(shown))
+	a.warns(s99term.StatusWarning, catalog.ReportLintCandidates(a.say(), catalog.ReportLintCandidatesParams{
+		Count: len(shown)}))
 	if hidden := len(all) - len(shown); hidden > 0 {
-		a.warns("%d lower-confidence finding(s) hidden; see `loc lint shared --verbose`\n", hidden)
+		a.warns(s99term.StatusWarning, catalog.ReportLintHidden(a.say(), catalog.ReportLintHiddenParams{
+			Count: hidden}))
 	}
 	return nil
 }
 
+// printCandidate keeps its aligned block; task 16 gives it a table.
 func printCandidate(a *app, c shared.Candidate) {
-	a.warns("\nI18N021 possible shared message\n\n")
+	var b strings.Builder
+	b.WriteString("\nI18N021 possible shared message\n\n")
 
-	a.warns("  Keys:\n")
+	b.WriteString("  Keys:\n")
 	for _, key := range c.Keys {
-		a.warns("    %s\n", key)
+		fmt.Fprintf(&b, "    %s\n", key)
 	}
 
-	a.warns("\n  Translations:\n")
+	b.WriteString("\n  Translations:\n")
 	for _, locale := range sortedMapKeys(c.Translations) {
 		// A plural's forms are joined by a NUL; show the separator instead.
 		text := strings.ReplaceAll(c.Translations[locale], "\x00", " | ")
-		a.warns("    %-4s %s\n", locale+":", text)
+		fmt.Fprintf(&b, "    %-4s %s\n", locale+":", text)
 	}
 
 	if c.Suggested != "" {
-		a.warns("\n  Suggested key:\n    %s\n", c.Suggested)
+		fmt.Fprintf(&b, "\n  Suggested key:\n    %s\n", c.Suggested)
 	}
-	a.warns("\n  Confidence:\n    %s\n", c.Confidence)
+	fmt.Fprintf(&b, "\n  Confidence:\n    %s\n", c.Confidence)
 	if c.Reason != "" {
-		a.warns("    %s\n", reasonText(a.say(), c))
+		fmt.Fprintf(&b, "    %s\n", reasonText(a.say(), c))
 	}
+	a.block(b.String())
 }
 
 // reasonText is a downgrade's reason in words; --json keeps the code.
@@ -183,13 +191,17 @@ func cmdLintDuplicates(ctx context.Context, a *app, asJSON bool) error {
 	}
 
 	if len(exact) == 0 {
-		a.says("loc: no duplicate contracts\n")
+		a.says(s99term.StatusOK, catalog.ReportLintNoDuplicates(a.say()))
 		return nil
 	}
+	// The aligned rows stay until task 16 gives them a table.
+	var b strings.Builder
 	for _, c := range exact {
-		a.warns("%-10s %s\n", c.Confidence, strings.Join(c.Keys, "  "))
+		fmt.Fprintf(&b, "%-10s %s\n", c.Confidence, strings.Join(c.Keys, "  "))
 	}
-	a.warns("\n%d duplicate contract(s)\n", len(exact))
+	a.block(b.String())
+	a.warns(s99term.StatusWarning, catalog.ReportLintDuplicates(a.say(), catalog.ReportLintDuplicatesParams{
+		Count: len(exact)}))
 	return nil
 }
 
@@ -210,7 +222,7 @@ func cmdLintKeys(ctx context.Context, a *app, asJSON bool) error {
 	}
 
 	if len(cfg.Scan) == 0 {
-		a.says("loc: no scan roots configured; nothing to compare against\n")
+		a.says(s99term.StatusSkipped, catalog.ReportLintNoScanRoots(a.say()))
 		return nil
 	}
 
@@ -242,27 +254,32 @@ func cmdLintKeys(ctx context.Context, a *app, asJSON bool) error {
 		return verdict
 	}
 
-	a.says("scanned %d file(s) in %d root(s)\n", refs.Files, len(cfg.Scan))
+	a.says(s99term.StatusRunning, catalog.ReportLintScanned(a.say(), catalog.ReportLintScannedParams{
+		Files: refs.Files, Roots: len(cfg.Scan)}))
 
 	// An undeclared key renders raw, so this class is always a bug.
 	if len(missing) > 0 {
-		a.warns("\nI18N030 referenced but not declared\n\n")
+		var b strings.Builder
+		b.WriteString("\nI18N030 referenced but not declared\n\n")
 		for _, ref := range missing {
-			a.warns("  %-40s %s:%d\n", ref.Key, ref.File, ref.Line)
+			fmt.Fprintf(&b, "  %-40s %s:%d\n", ref.Key, ref.File, ref.Line)
 		}
+		a.block(b.String())
 	}
 
 	if len(unused) > 0 {
-		a.warns("\nI18N032 declared but not referenced\n\n")
+		var b strings.Builder
+		b.WriteString("\nI18N032 declared but not referenced\n\n")
 		for _, key := range unused {
-			a.warns("  %s\n", key)
+			fmt.Fprintf(&b, "  %s\n", key)
 		}
-		a.warns("\n  A key built at runtime looks unused. Declare it under dynamicKeys\n")
-		a.warns("  rather than deleting it.\n")
+		b.WriteString("\n  A key built at runtime looks unused. Declare it under dynamicKeys\n")
+		b.WriteString("  rather than deleting it.\n")
+		a.block(b.String())
 	}
 
 	if len(missing)+len(unused) == 0 {
-		a.says("loc: every declared key is referenced, and every reference resolves\n")
+		a.says(s99term.StatusOK, catalog.ReportLintClean(a.say()))
 	}
 	return verdict
 }

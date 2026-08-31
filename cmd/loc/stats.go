@@ -6,8 +6,11 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"github.com/smegg99/s99term"
 	"github.com/spf13/cobra"
 
 	"github.com/smegg99/s99locale/internal/catalog"
@@ -35,9 +38,12 @@ func cmdStats(ctx context.Context, a *app) error {
 		return err
 	}
 
+	l := a.say()
+
+	// The report is the command's result, not a success line, so it survives --quiet.
 	keys := set.Keys()
-	a.warns("locales   %v\n", cfg.Locales)
-	a.warns("messages  %d\n", len(keys))
+	a.warns(s99term.StatusNone, catalog.ReportStatsLocales(l), s99term.F("locales", strings.Join(cfg.Locales, ", ")))
+	a.warns(s99term.StatusNone, catalog.ReportStatsMessages(l), s99term.F("count", strconv.Itoa(len(keys))))
 
 	printByNamespace(a, set, keys, cfg.DefaultLocale)
 	printByTarget(a, cfg, set, keys)
@@ -59,14 +65,14 @@ func printByNamespace(a *app, set *message.Set, keys []string, base string) {
 		}
 	}
 
-	a.warns("\nby namespace\n")
+	a.warns(s99term.StatusNone, catalog.ReportStatsByNamespace(a.say()))
 	for _, ns := range sortedCountKeys(counts) {
-		a.warns("  %-12s %d\n", ns, counts[ns])
+		a.warns(s99term.StatusNone, ns, s99term.F("count", strconv.Itoa(counts[ns])))
 	}
 }
 
 func printByTarget(a *app, cfg *config.Config, set *message.Set, keys []string) {
-	a.warns("\nby target\n")
+	a.warns(s99term.StatusNone, catalog.ReportStatsByTarget(a.say()))
 	for _, target := range cfg.Targets {
 		count := 0
 		for _, key := range keys {
@@ -74,12 +80,12 @@ func printByTarget(a *app, cfg *config.Config, set *message.Set, keys []string) 
 				count++
 			}
 		}
-		a.warns("  %-12s %d\n", target, count)
+		a.warns(s99term.StatusNone, string(target), s99term.F("count", strconv.Itoa(count)))
 	}
 }
 
 func printMissing(a *app, cfg *config.Config, set *message.Set, keys []string) {
-	a.warns("\nmissing translations\n")
+	a.warns(s99term.StatusNone, catalog.ReportStatsMissing(a.say()))
 	for _, locale := range cfg.Locales {
 		missing := 0
 		for _, key := range keys {
@@ -87,13 +93,13 @@ func printMissing(a *app, cfg *config.Config, set *message.Set, keys []string) {
 				missing++
 			}
 		}
-		a.warns("  %-12s %d\n", locale, missing)
+		a.warns(s99term.StatusNone, locale, s99term.F("count", strconv.Itoa(missing)))
 	}
 }
 
 // printSizes has one row per target, because each target is its own tree.
 func printSizes(a *app, cfg *config.Config, out *generate.Outputs) {
-	a.warns("\ngenerated size\n")
+	a.warns(s99term.StatusNone, catalog.ReportStatsGeneratedSize(a.say()))
 
 	total := 0
 	for _, target := range cfg.Targets {
@@ -102,9 +108,9 @@ func printSizes(a *app, cfg *config.Config, out *generate.Outputs) {
 			size += len(f.Bytes)
 		}
 		total += size
-		a.warns("  %-12s %s\n", target, humanBytes(size))
+		a.warns(s99term.StatusNone, string(target), s99term.F("size", humanBytes(size)))
 	}
-	a.warns("  %-12s %s\n", "total", humanBytes(total))
+	a.warns(s99term.StatusNone, catalog.ReportStatsTotal(a.say()), s99term.F("size", humanBytes(total)))
 }
 
 func humanBytes(n int) string {

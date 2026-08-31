@@ -18,7 +18,7 @@ func TestLangRendersHelpInPolish(t *testing.T) {
 	pinEnglish(t)
 
 	out := &bytes.Buffer{}
-	root := rootCmd(newApp(&bytes.Buffer{}, &bytes.Buffer{}))
+	root := rootCmd(newApp(&bytes.Buffer{}, &bytes.Buffer{}, []string{"LANG=C", "NO_COLOR=1"}))
 	root.SetArgs([]string{"--lang", "pl", "--help"})
 	root.SetOut(out)
 	root.SetErr(out)
@@ -38,7 +38,7 @@ func TestLangSurvivesHelpComingFirst(t *testing.T) {
 	pinEnglish(t)
 
 	out := &bytes.Buffer{}
-	root := rootCmd(newApp(&bytes.Buffer{}, &bytes.Buffer{}))
+	root := rootCmd(newApp(&bytes.Buffer{}, &bytes.Buffer{}, []string{"LANG=C", "NO_COLOR=1"}))
 	root.SetArgs([]string{"--help", "--lang", "pl"})
 	root.SetOut(out)
 	root.SetErr(out)
@@ -56,7 +56,7 @@ func TestUnsupportedLangIsAUsageError(t *testing.T) {
 	pinEnglish(t)
 
 	out := &bytes.Buffer{}
-	root := rootCmd(newApp(&bytes.Buffer{}, &bytes.Buffer{}))
+	root := rootCmd(newApp(&bytes.Buffer{}, &bytes.Buffer{}, []string{"LANG=C", "NO_COLOR=1"}))
 	root.SetArgs([]string{"--lang", "de"})
 	root.SetOut(out)
 	root.SetErr(out)
@@ -78,7 +78,7 @@ func TestCobrasOwnTextIsTranslated(t *testing.T) {
 	pinEnglish(t)
 
 	out := &bytes.Buffer{}
-	root := rootCmd(newApp(&bytes.Buffer{}, &bytes.Buffer{}))
+	root := rootCmd(newApp(&bytes.Buffer{}, &bytes.Buffer{}, []string{"LANG=C", "NO_COLOR=1"}))
 	root.SetArgs([]string{"--lang", "pl", "--help"})
 	root.SetOut(out)
 	root.SetErr(out)
@@ -99,7 +99,7 @@ func TestTooManyArgumentsIsAnsweredInTheReadersLanguage(t *testing.T) {
 	pinEnglish(t)
 
 	out := &bytes.Buffer{}
-	root := rootCmd(newApp(&bytes.Buffer{}, &bytes.Buffer{}))
+	root := rootCmd(newApp(&bytes.Buffer{}, &bytes.Buffer{}, []string{"LANG=C", "NO_COLOR=1"}))
 	root.SetArgs([]string{"--lang", "pl", "build", "extra"})
 	root.SetOut(out)
 	root.SetErr(out)

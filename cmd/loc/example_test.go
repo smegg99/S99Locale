@@ -75,7 +75,7 @@ func TestExampleBuildsEveryTarget(t *testing.T) {
 	if err := cmdBuild(context.Background(), a); err != nil {
 		t.Fatalf("the committed example does not build: %v", err)
 	}
-	if want := "loc: 10 file(s) generated, 10 changed\n"; out.String() != want {
+	if want := "loc: 10 file(s) generated, 10 changed"; !strings.Contains(out.String(), want) {
 		t.Fatalf("build said %q, want %q", out.String(), want)
 	}
 

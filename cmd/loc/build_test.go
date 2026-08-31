@@ -84,7 +84,7 @@ func TestStrictIsOnlyOnTheCommandsThatUseIt(t *testing.T) {
 // Each registered flag has to reach the options the command reads.
 func TestFlagsReachTheOptions(t *testing.T) {
 	for _, path := range [][]string{{"build"}, {"check"}, {"watch"}, {"lint"}, {"lint", "keys"}} {
-		a := newApp(io.Discard, io.Discard)
+		a := newApp(io.Discard, io.Discard, []string{"LANG=C", "NO_COLOR=1"})
 		cmd, _, err := rootCmd(a).Find(path)
 		if err != nil {
 			t.Fatal(err)
@@ -97,7 +97,7 @@ func TestFlagsReachTheOptions(t *testing.T) {
 		}
 	}
 
-	a := newApp(io.Discard, io.Discard)
+	a := newApp(io.Discard, io.Discard, []string{"LANG=C", "NO_COLOR=1"})
 	if err := rootCmd(a).ParseFlags([]string{"-c", "elsewhere.cue", "--quiet"}); err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +111,7 @@ func TestBuildRunsWithItsFlagsThroughTheTree(t *testing.T) {
 	pinEnglish(t)
 
 	out := &bytes.Buffer{}
-	root := rootCmd(newApp(out, &bytes.Buffer{}))
+	root := rootCmd(newApp(out, &bytes.Buffer{}, []string{"LANG=C", "NO_COLOR=1"}))
 	root.SetArgs([]string{"build", "--strict", "--quiet", "-c", project(t, onlyWarnings)})
 	if err := root.Execute(); !errors.Is(err, errFailed) {
 		t.Fatalf("build --strict on a warning = %v, want errFailed\n%s", err, out.String())
@@ -121,7 +121,7 @@ func TestBuildRunsWithItsFlagsThroughTheTree(t *testing.T) {
 	}
 
 	hushed := &bytes.Buffer{}
-	root = rootCmd(newApp(hushed, &bytes.Buffer{}))
+	root = rootCmd(newApp(hushed, &bytes.Buffer{}, []string{"LANG=C", "NO_COLOR=1"}))
 	root.SetArgs([]string{"--quiet", "build", "-c", project(t, valid)})
 	if err := root.Execute(); err != nil {
 		t.Fatal(err)

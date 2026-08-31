@@ -13,6 +13,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"github.com/smegg99/s99term"
 	"github.com/spf13/cobra"
 
 	"github.com/smegg99/s99locale/internal/catalog"
@@ -70,7 +71,8 @@ func cmdWatch(ctx context.Context, a *app) error {
 		}
 	}
 
-	a.says("loc: watching %d root(s); ctrl-c to stop\n", len(cfg.AbsRoots()))
+	a.says(s99term.StatusRunning, catalog.ReportWatchWatching(a.say(), catalog.ReportWatchWatchingParams{
+		Roots: len(cfg.AbsRoots())}))
 	rebuild(ctx, a)
 
 	timer := time.NewTimer(0)
@@ -81,7 +83,7 @@ func cmdWatch(ctx context.Context, a *app) error {
 	for {
 		select {
 		case <-ctx.Done():
-			a.warns("\nloc: stopped\n")
+			a.warns(s99term.StatusSkipped, catalog.ReportWatchStopped(a.say()))
 			return nil
 
 		case event, ok := <-watcher.Events:
@@ -106,7 +108,8 @@ func cmdWatch(ctx context.Context, a *app) error {
 			if !ok {
 				return nil
 			}
-			a.warns("loc: watch: %v\n", err)
+			a.warns(s99term.StatusWarning, catalog.ReportWatchError(a.say(), catalog.ReportWatchErrorParams{
+				Error: err.Error()}))
 		}
 	}
 }
@@ -144,11 +147,11 @@ func watchTree(watcher *fsnotify.Watcher, root string) error {
 
 // rebuild runs one build and reports, swallowing failure so the loop survives.
 func rebuild(ctx context.Context, a *app) {
-	stamp := time.Now().Format("15:04:05")
+	start := time.Now()
 
 	err := cmdBuild(ctx, a)
 	if err == nil {
-		a.says("%s  ok\n", stamp)
+		a.says(s99term.StatusOK, catalog.ReportWatchOk(a.say()), s99term.Dur("took", time.Since(start)))
 		return
 	}
 	// ctrl-c ended the build, usually a lock wait; a failure line would blame the sources.
@@ -157,7 +160,7 @@ func rebuild(ctx context.Context, a *app) {
 	}
 	// cmdBuild prints diagnostics for errFailed only; any other error is printed here.
 	if !errors.Is(err, errFailed) {
-		a.warns("loc: %v\n", err)
+		a.warns(s99term.StatusFailed, err.Error())
 	}
-	a.warns("%s  build failed; still watching\n", stamp)
+	a.warns(s99term.StatusFailed, catalog.ReportWatchFailed(a.say()), s99term.Dur("took", time.Since(start)))
 }

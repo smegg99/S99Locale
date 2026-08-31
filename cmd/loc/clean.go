@@ -6,6 +6,7 @@ import (
 	"context"
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"github.com/smegg99/s99term"
 	"github.com/spf13/cobra"
 
 	"github.com/smegg99/s99locale/internal/catalog"
@@ -44,17 +45,19 @@ func cmdClean(ctx context.Context, a *app) error {
 	if err != nil {
 		// Trees cleared before the failure stay cleared, so their removals are reported with the error.
 		for _, name := range removed {
-			a.warns("loc: removed %s\n", name)
+			a.warns(s99term.StatusSkipped, catalog.ReportCleanRemoved(a.say(), catalog.ReportCleanRemovedParams{
+				Path: name}))
 		}
 		return err
 	}
 
 	if len(removed) == 0 {
-		a.says("loc: nothing to clean\n")
+		a.says(s99term.StatusSkipped, catalog.ReportCleanNothing(a.say()))
 		return nil
 	}
 	for _, name := range removed {
-		a.says("loc: removed %s\n", name)
+		a.says(s99term.StatusSkipped, catalog.ReportCleanRemoved(a.say(), catalog.ReportCleanRemovedParams{
+			Path: name}))
 	}
 	return nil
 }

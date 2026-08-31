@@ -134,7 +134,7 @@ func TestLintJSONGoesToTheDataStream(t *testing.T) {
 // The strict JSON form through the tree: exit 1, and the document on stdout.
 func TestLintKeysStrictJSONThroughTheTree(t *testing.T) {
 	out, data := &bytes.Buffer{}, &bytes.Buffer{}
-	root := rootCmd(newApp(out, data))
+	root := rootCmd(newApp(out, data, []string{"LANG=C", "NO_COLOR=1"}))
 	root.SetArgs([]string{"lint", "keys", "--strict", "--json", "-c", scanProject(t, scanLocales, findings)})
 
 	if err := root.Execute(); !errors.Is(err, errFailed) {
@@ -245,7 +245,7 @@ func TestLintSharedVerboseThroughTheTree(t *testing.T) {
 	path := project(t, lowConfidence)
 	run := func(args ...string) (string, error) {
 		out := &bytes.Buffer{}
-		root := rootCmd(newApp(out, &bytes.Buffer{}))
+		root := rootCmd(newApp(out, &bytes.Buffer{}, []string{"LANG=C", "NO_COLOR=1"}))
 		root.SetArgs(append(args, "-c", path))
 		err := root.Execute()
 		return out.String(), err

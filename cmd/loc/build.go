@@ -4,8 +4,10 @@ package main
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"github.com/smegg99/s99term"
 	"github.com/spf13/cobra"
 
 	"github.com/smegg99/s99locale/internal/catalog"
@@ -44,23 +46,31 @@ func cmdBuild(ctx context.Context, a *app) error {
 	}
 	defer held.Release()
 
+	step := a.begin(catalog.ReportBuildWorking(a.say()))
+
 	out, err := generate.Build(ctx, cfg, set)
 	if err != nil {
+		a.end(step, s99term.StatusFailed)
 		return err
 	}
 
 	written, removed, err := out.Write()
 	if err != nil {
+		a.end(step, s99term.StatusFailed)
 		// Trees written before the failure stay written, so their removals are reported with the error.
 		for _, name := range removed {
-			a.warns("loc: removed %s\n", name)
+			a.warns(s99term.StatusSkipped, catalog.ReportBuildRemoved(a.say(), catalog.ReportBuildRemovedParams{
+				Path: name}))
 		}
 		return err
 	}
+	a.end(step, s99term.StatusOK, s99term.F("files", strconv.Itoa(len(out.Files()))))
 
-	a.says("loc: %d file(s) generated, %d changed\n", len(out.Files()), written)
+	a.says(s99term.StatusOK, catalog.ReportBuildGenerated(a.say(), catalog.ReportBuildGeneratedParams{
+		Files: len(out.Files()), Changed: written}))
 	for _, name := range removed {
-		a.says("loc: removed %s\n", name)
+		a.says(s99term.StatusSkipped, catalog.ReportBuildRemoved(a.say(), catalog.ReportBuildRemovedParams{
+			Path: name}))
 	}
 	return nil
 }

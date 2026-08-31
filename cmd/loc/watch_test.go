@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/smegg99/s99locale/internal/catalog"
 )
 
 // A ctrl-c that ends a lock wait stops watch without a failure line.
@@ -25,8 +27,12 @@ func TestACancelledRebuildPrintsNoFailure(t *testing.T) {
 
 	rebuild(ctx, a)
 
-	if got, want := out.String(), "loc: waiting for another loc run to finish\n"; got != want {
-		t.Fatalf("output %q, want only %q", got, want)
+	got := out.String()
+	if want := catalog.ReportWaitingForLock(a.say()); !strings.Contains(got, want) {
+		t.Fatalf("output %q does not say it waited", got)
+	}
+	if blamed := catalog.ReportWatchFailed(a.say()); strings.Contains(got, blamed) {
+		t.Fatalf("output %q blames the sources for a ctrl-c", got)
 	}
 }
 
@@ -51,8 +57,8 @@ func TestAFailedRebuildSaysWhy(t *testing.T) {
 	rebuild(ctx, a)
 
 	got := out.String()
-	why := strings.Index(got, "loc: "+want.Error()+"\n")
-	failed := strings.Index(got, "build failed; still watching")
+	why := strings.Index(got, want.Error())
+	failed := strings.Index(got, catalog.ReportWatchFailed(a.say()))
 	if why < 0 || failed < why {
 		t.Fatalf("output %q does not say why the build failed before saying it failed", got)
 	}

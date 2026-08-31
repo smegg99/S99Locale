@@ -53,9 +53,11 @@ func testApp(t *testing.T, o options) (*app, *bytes.Buffer, *bytes.Buffer) {
 	t.Helper()
 
 	out, data := &bytes.Buffer{}, &bytes.Buffer{}
-	a := &app{out: out, data: data, opts: o}
-	// English, whatever the machine running the tests has in its environment.
+	// LANG=C for ASCII glyphs on any machine, and NO_COLOR so assertions read plainly.
+	a := &app{out: out, data: data, env: []string{"LANG=C", "NO_COLOR=1"}, opts: o}
+	// English, whatever the environment says.
 	a.localize(catalog.DefaultLocale)
+	t.Cleanup(a.close)
 	return a, out, data
 }
 
@@ -154,10 +156,14 @@ func TestQuietCheckStillSaysWhatWasModified(t *testing.T) {
 	if err := cmdCheck(ctx, a, false); !errors.Is(err, errFailed) {
 		t.Fatalf("err = %v, want a failure", err)
 	}
-	for _, want := range []string{"loc cannot prove it wrote these, so build will not touch them; remove them by hand:\n  generated/web/pl/common.json\n"} {
-		if !strings.Contains(out.String(), want) {
-			t.Errorf("--quiet hid %q:\n%s", want, out.String())
-		}
+	// The path must follow its own heading; the other class lists paths too.
+	_, under, ok := strings.Cut(out.String(), catalog.ReportCheckModified(a.say()))
+	if !ok {
+		t.Fatalf("--quiet hid the heading:\n%s", out.String())
+	}
+	named, _, _ := strings.Cut(strings.TrimPrefix(under, "\n"), "\n")
+	if strings.TrimSpace(named) != "generated/web/pl/common.json" {
+		t.Errorf("under the heading is %q, want the modified file", named)
 	}
 
 	err := cmdBuild(ctx, a)
@@ -280,10 +286,13 @@ func TestReportSeparatesDiagnostics(t *testing.T) {
 	if err := cmdBuild(context.Background(), a); !errors.Is(err, errFailed) {
 		t.Fatalf("err = %v, want a failure", err)
 	}
-	for _, want := range []string{"\n\nI18N005", "\n\n2 error(s), 0 warning(s)\n"} {
+	for _, want := range []string{"\n\nI18N005", "\n\n[x] failed"} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("no blank line before %q:\n%s", strings.TrimSpace(want), out.String())
 		}
+	}
+	if want := "2 error(s), 0 warning(s)"; !strings.Contains(out.String(), want) {
+		t.Errorf("no totals line:\n%s", out.String())
 	}
 }
 
@@ -379,7 +388,7 @@ func TestUnknownConfigPathIsAnError(t *testing.T) {
 
 // An unknown subcommand is rejected.
 func TestUnknownCommandIsRejected(t *testing.T) {
-	cmd := rootCmd(newApp(&bytes.Buffer{}, &bytes.Buffer{}))
+	cmd := rootCmd(newApp(&bytes.Buffer{}, &bytes.Buffer{}, []string{"LANG=C", "NO_COLOR=1"}))
 	cmd.SetArgs([]string{"nonsense"})
 	cmd.SetOut(&bytes.Buffer{})
 	cmd.SetErr(&bytes.Buffer{})

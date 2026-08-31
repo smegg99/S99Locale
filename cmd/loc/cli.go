@@ -31,6 +31,7 @@ func rootCmd(a *app) *cobra.Command {
 	root.PersistentFlags().BoolVar(&a.opts.quiet, "quiet", false, "")
 	// --lang must exist before any describer looks it up.
 	a.registerLang(root)
+	a.registerColor(root)
 
 	root.AddCommand(
 		newBuildCmd(a),
@@ -47,6 +48,7 @@ func rootCmd(a *app) *cobra.Command {
 		root.PersistentFlags().Lookup("config").Usage = catalog.CliFlagConfig(l)
 		root.PersistentFlags().Lookup("quiet").Usage = catalog.CliFlagQuiet(l)
 		root.PersistentFlags().Lookup("lang").Usage = catalog.CliFlagLang(l)
+		root.PersistentFlags().Lookup("color").Usage = catalog.CliFlagColor(l)
 	})
 
 	// After AddCommand, so help and completion exist before the describe pass.

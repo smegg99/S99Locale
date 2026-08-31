@@ -10,10 +10,11 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/smegg99/s99term"
 )
 
 func main() {
@@ -21,14 +22,18 @@ func main() {
 	defer stop()
 
 	// stderr is the human stream and stdout the machine one, so `loc check --json` pipes cleanly.
-	a := newApp(os.Stderr, os.Stdout)
+	a := newApp(os.Stderr, os.Stdout, os.Environ())
+	// os.Exit skips a deferred call, so the two exit paths close it themselves.
+	defer a.close()
 
 	if err := rootCmd(a).ExecuteContext(ctx); err != nil {
 		// Exit 1: the check failed and the command printed why. Exit 2: loc could not run.
 		if errors.Is(err, errFailed) {
+			a.close()
 			os.Exit(1)
 		}
-		fmt.Fprintln(os.Stderr, "loc:", err)
+		a.warns(s99term.StatusFailed, err.Error())
+		a.close()
 		os.Exit(2)
 	}
 }

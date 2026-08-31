@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/charmbracelet/colorprofile"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/spf13/cobra"
 
@@ -23,6 +24,27 @@ func (a *app) registerLang(root *cobra.Command) {
 			}))
 		}
 		a.localize(match)
+		return nil
+	})
+}
+
+// registerColor adds --color; its callback fires in ParseFlags, before anything is printed.
+func (a *app) registerColor(root *cobra.Command) {
+	root.PersistentFlags().Func("color", "", func(value string) error {
+		switch value {
+		case "auto":
+			// Zero means detect, as in s99term.New.
+			a.opts.profile = 0
+		case "always":
+			a.opts.profile = colorprofile.TrueColor
+		case "never":
+			a.opts.profile = colorprofile.NoTTY
+		default:
+			return errors.New(catalog.CliErrUnknownColor(a.say(), catalog.CliErrUnknownColorParams{
+				Value: value,
+			}))
+		}
+		a.invalidate()
 		return nil
 	})
 }

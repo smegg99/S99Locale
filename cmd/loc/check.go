@@ -5,8 +5,10 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"github.com/smegg99/s99term"
 	"github.com/spf13/cobra"
 
 	"github.com/smegg99/s99locale/internal/catalog"
@@ -71,15 +73,20 @@ func cmdCheck(ctx context.Context, a *app, asJSON bool) error {
 	}
 	defer held.Release()
 
+	step := a.begin(catalog.ReportCheckWorking(a.say()))
+
 	out, err := generate.Build(ctx, cfg, set)
 	if err != nil {
+		a.end(step, s99term.StatusFailed)
 		return err
 	}
 
 	stale, modified, err := out.Diff()
 	if err != nil {
+		a.end(step, s99term.StatusFailed)
 		return err
 	}
+	a.end(step, s99term.StatusOK, s99term.F("files", strconv.Itoa(len(out.Files()))))
 
 	if asJSON {
 		return a.checkJSON(report, stale, modified, len(out.Files()), nil)
@@ -89,22 +96,23 @@ func cmdCheck(ctx context.Context, a *app, asJSON bool) error {
 	// Two classes because the remedy differs: `loc build` fixes a stale file but refuses one
 	// edited since or never written by loc.
 	if len(modified) > 0 {
-		a.warns("loc cannot prove it wrote these, so build will not touch them; remove them by hand:\n")
+		a.warns(s99term.StatusFailed, catalog.ReportCheckModified(a.say()))
 		for _, p := range modified {
-			a.warns("  %s\n", p)
+			a.warns(s99term.StatusNone, p)
 		}
 	}
 	if len(stale) > 0 {
-		a.warns("generated output is stale; run `loc build`:\n")
+		a.warns(s99term.StatusStale, catalog.ReportCheckStale(a.say()))
 		for _, p := range stale {
-			a.warns("  %s\n", p)
+			a.warns(s99term.StatusNone, p)
 		}
 	}
 	if len(stale)+len(modified) > 0 {
 		return errFailed
 	}
 
-	a.says("loc: %d file(s) current\n", len(out.Files()))
+	a.says(s99term.StatusOK, catalog.ReportCheckCurrent(a.say(), catalog.ReportCheckCurrentParams{
+		Files: len(out.Files())}))
 	return nil
 }
 
