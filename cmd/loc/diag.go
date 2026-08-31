@@ -3,10 +3,8 @@
 package main
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"github.com/smegg99/s99term"
 
 	"github.com/smegg99/s99locale/internal/catalog"
 	"github.com/smegg99/s99locale/internal/validate"
@@ -16,22 +14,33 @@ import (
 func (a *app) renderDiagnostic(d validate.Diagnostic) string {
 	l := a.say()
 
-	var b strings.Builder
-	fmt.Fprintf(&b, "%s %s\n", d.Code, diagText(l, d))
-
+	var rows [][2]string
 	if d.Key != "" {
-		fmt.Fprintf(&b, "\n  %-8s %s\n", catalog.DiagLabelKey(l)+":", d.Key)
+		rows = append(rows, [2]string{catalog.DiagLabelKey(l), d.Key})
 	}
 	for _, p := range d.Context {
-		fmt.Fprintf(&b, "  %-8s %s\n", diagLabel(l, p)+":", diagValue(l, p))
+		rows = append(rows, [2]string{diagLabel(l, p), diagValue(l, p)})
 	}
 	if d.Cause != "" {
-		fmt.Fprintf(&b, "  %-8s %s\n", catalog.DiagLabelCause(l)+":", d.Cause)
+		rows = append(rows, [2]string{catalog.DiagLabelCause(l), d.Cause})
 	}
 	if d.Source.File != "" {
-		fmt.Fprintf(&b, "  %-8s %s\n", catalog.DiagLabelSource(l)+":", d.Source)
+		rows = append(rows, [2]string{catalog.DiagLabelSource(l), d.Source.String()})
 	}
-	return b.String()
+
+	head := a.screen().Renderer().Line(diagStatus(d), diagText(l, d), s99term.F("code", d.Code))
+	if len(rows) == 0 {
+		return head + "\n"
+	}
+	return head + "\n" + a.pairs(rows) + "\n"
+}
+
+// diagStatus maps a severity onto the shared state vocabulary.
+func diagStatus(d validate.Diagnostic) s99term.Status {
+	if d.Severity == validate.SevWarning {
+		return s99term.StatusWarning
+	}
+	return s99term.StatusFailed
 }
 
 // diagLabel resolves a context label: a locale code is data, a word is a key.

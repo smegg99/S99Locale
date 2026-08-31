@@ -4,7 +4,9 @@ package main
 
 import (
 	"io"
+	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/smegg99/s99term"
 
@@ -149,4 +151,32 @@ func (a *app) printReport(r *validate.Report) {
 // waitingForLock says a run is waiting for another; it survives --quiet so the wait is visible.
 func (a *app) waitingForLock() {
 	a.warns(s99term.StatusWaiting, catalog.ReportWaitingForLock(a.say()))
+}
+
+// table is loc's one table shape: the border follows the charset, the widths follow the content.
+func (a *app) table(headers []string, rows [][]string) string {
+	return a.screen().Styles().Table().Headers(headers...).Rows(rows...).Render()
+}
+
+// pairs is a borderless label and value table, so labels line up without a hand-set width.
+func (a *app) pairs(rows [][2]string) string {
+	built := a.screen().Styles().Table().Border(lipgloss.HiddenBorder()).BorderTop(false).
+		BorderBottom(false).BorderLeft(false).BorderRight(false).BorderColumn(false)
+	for _, row := range rows {
+		label := row[0]
+		if label != "" {
+			label += ":"
+		}
+		built = built.Row(label, row[1])
+	}
+	return trimRows(built.Render())
+}
+
+// trimRows drops trailing cell padding, so a value is the last thing on its line.
+func trimRows(block string) string {
+	lines := strings.Split(block, "\n")
+	for i, line := range lines {
+		lines[i] = strings.TrimRight(line, " ")
+	}
+	return strings.Join(lines, "\n")
 }

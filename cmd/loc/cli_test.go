@@ -286,10 +286,9 @@ func TestReportSeparatesDiagnostics(t *testing.T) {
 	if err := cmdBuild(context.Background(), a); !errors.Is(err, errFailed) {
 		t.Fatalf("err = %v, want a failure", err)
 	}
-	for _, want := range []string{"\n\nI18N005", "\n\n[x] failed"} {
-		if !strings.Contains(out.String(), want) {
-			t.Errorf("no blank line before %q:\n%s", strings.TrimSpace(want), out.String())
-		}
+	// The second diagnostic and the totals line both follow a blank line.
+	if got := strings.Count(out.String(), "\n\n[x] failed"); got != 2 {
+		t.Errorf("blank-line separations = %d, want 2:\n%s", got, out.String())
 	}
 	if want := "2 error(s), 0 warning(s)"; !strings.Contains(out.String(), want) {
 		t.Errorf("no totals line:\n%s", out.String())
@@ -349,9 +348,21 @@ func TestStatsSizesEachTarget(t *testing.T) {
 	if !ok {
 		t.Fatalf("no size table:\n%s", out.String())
 	}
-	rows := strings.Split(strings.TrimSpace(sizes), "\n")
-	if len(rows) != 2 || !strings.HasPrefix(strings.TrimSpace(rows[0]), "web ") || !strings.HasPrefix(strings.TrimSpace(rows[1]), "total ") {
-		t.Fatalf("size rows = %q, want web then total", rows)
+	// The table's rules are not rows, so only the celled lines count.
+	var rows [][]string
+	for _, line := range strings.Split(strings.TrimSpace(sizes), "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "|") {
+			continue
+		}
+		var cells []string
+		for _, cell := range strings.Split(strings.Trim(line, "|"), "|") {
+			cells = append(cells, strings.TrimSpace(cell))
+		}
+		rows = append(rows, cells)
+	}
+	if len(rows) != 3 || rows[0][0] != "NAME" || rows[1][0] != "web" || rows[2][0] != "total" {
+		t.Fatalf("size rows = %q, want the header, then web, then total", rows)
 	}
 }
 

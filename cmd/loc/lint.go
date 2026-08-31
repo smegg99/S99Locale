@@ -19,6 +19,7 @@ import (
 	"github.com/smegg99/s99locale/internal/message"
 	"github.com/smegg99/s99locale/internal/scan"
 	"github.com/smegg99/s99locale/internal/shared"
+	"github.com/smegg99/s99locale/internal/validate"
 )
 
 func newLintCmd(a *app) *cobra.Command {
@@ -111,7 +112,7 @@ func cmdLintShared(ctx context.Context, a *app, verbose, asJSON bool) error {
 	}
 
 	for _, c := range shown {
-		printCandidate(a, c)
+		a.printCandidate(c)
 	}
 
 	a.warns(s99term.StatusWarning, catalog.ReportLintCandidates(a.say(), catalog.ReportLintCandidatesParams{
@@ -123,31 +124,46 @@ func cmdLintShared(ctx context.Context, a *app, verbose, asJSON bool) error {
 	return nil
 }
 
-// printCandidate keeps its aligned block; task 16 gives it a table.
-func printCandidate(a *app, c shared.Candidate) {
-	var b strings.Builder
-	b.WriteString("\nI18N021 possible shared message\n\n")
+// printCandidate composes one finding as three label blocks.
+func (a *app) printCandidate(c shared.Candidate) {
+	l := a.say()
 
-	b.WriteString("  Keys:\n")
-	for _, key := range c.Keys {
-		fmt.Fprintf(&b, "    %s\n", key)
-	}
+	a.warns(s99term.StatusWarning, catalog.ReportLintPossibleShared(l),
+		s99term.F("code", validate.CodePossibleShared))
 
-	b.WriteString("\n  Translations:\n")
+	a.block(a.pairs([][2]string{{catalog.ReportLintKeysLabel(l), strings.Join(c.Keys, "\n")}}))
+
+	rows := [][2]string{{catalog.ReportLintTranslationsLabel(l), ""}}
 	for _, locale := range sortedMapKeys(c.Translations) {
 		// A plural's forms are joined by a NUL; show the separator instead.
-		text := strings.ReplaceAll(c.Translations[locale], "\x00", " | ")
-		fmt.Fprintf(&b, "    %-4s %s\n", locale+":", text)
+		rows = append(rows, [2]string{locale, strings.ReplaceAll(c.Translations[locale], "\x00", " | ")})
 	}
+	a.block(a.pairs(rows))
 
+	tail := [][2]string{}
 	if c.Suggested != "" {
-		fmt.Fprintf(&b, "\n  Suggested key:\n    %s\n", c.Suggested)
+		tail = append(tail, [2]string{catalog.ReportLintSuggestedLabel(l), c.Suggested})
 	}
-	fmt.Fprintf(&b, "\n  Confidence:\n    %s\n", c.Confidence)
+	tail = append(tail, [2]string{catalog.ReportLintConfidenceLabel(l), confidenceText(l, c.Confidence)})
 	if c.Reason != "" {
-		fmt.Fprintf(&b, "    %s\n", reasonText(a.say(), c))
+		tail = append(tail, [2]string{"", reasonText(l, c)})
 	}
-	a.block(b.String())
+	a.block(a.pairs(tail))
+}
+
+// confidenceText is a confidence in words; --json keeps the stable word.
+func confidenceText(l *i18n.Localizer, c shared.Confidence) string {
+	switch c {
+	case shared.High:
+		return catalog.ReportLintConfidenceHigh(l)
+	case shared.Medium:
+		return catalog.ReportLintConfidenceMedium(l)
+	case shared.Low:
+		return catalog.ReportLintConfidenceLow(l)
+	default:
+		// Unmapped: print the raw word; lint_test.go fails on it.
+		return string(c)
+	}
 }
 
 // reasonText is a downgrade's reason in words; --json keeps the code.
@@ -194,12 +210,12 @@ func cmdLintDuplicates(ctx context.Context, a *app, asJSON bool) error {
 		a.says(s99term.StatusOK, catalog.ReportLintNoDuplicates(a.say()))
 		return nil
 	}
-	// The aligned rows stay until task 16 gives them a table.
-	var b strings.Builder
+	l := a.say()
+	rows := make([][]string, 0, len(exact))
 	for _, c := range exact {
-		fmt.Fprintf(&b, "%-10s %s\n", c.Confidence, strings.Join(c.Keys, "  "))
+		rows = append(rows, []string{confidenceText(l, c.Confidence), strings.Join(c.Keys, "  ")})
 	}
-	a.block(b.String())
+	a.block(a.table([]string{catalog.ReportLintColumnConfidence(l), catalog.ReportLintColumnKeys(l)}, rows))
 	a.warns(s99term.StatusWarning, catalog.ReportLintDuplicates(a.say(), catalog.ReportLintDuplicatesParams{
 		Count: len(exact)}))
 	return nil
@@ -254,32 +270,33 @@ func cmdLintKeys(ctx context.Context, a *app, asJSON bool) error {
 		return verdict
 	}
 
-	a.says(s99term.StatusRunning, catalog.ReportLintScanned(a.say(), catalog.ReportLintScannedParams{
+	l := a.say()
+	a.says(s99term.StatusRunning, catalog.ReportLintScanned(l, catalog.ReportLintScannedParams{
 		Files: refs.Files, Roots: len(cfg.Scan)}))
 
 	// An undeclared key renders raw, so this class is always a bug.
 	if len(missing) > 0 {
-		var b strings.Builder
-		b.WriteString("\nI18N030 referenced but not declared\n\n")
-		for _, ref := range missing {
-			fmt.Fprintf(&b, "  %-40s %s:%d\n", ref.Key, ref.File, ref.Line)
-		}
-		a.block(b.String())
+		a.warns(s99term.StatusFailed, catalog.ReportLintReferencedNotDeclared(l),
+			s99term.F("code", validate.CodeReferencedNotDeclared))
+		a.block(a.table(
+			[]string{catalog.ReportLintColumnKey(l), catalog.ReportLintColumnLocation(l)},
+			referenceRows(missing)))
 	}
 
 	if len(unused) > 0 {
-		var b strings.Builder
-		b.WriteString("\nI18N032 declared but not referenced\n\n")
+		a.warns(s99term.StatusWarning, catalog.ReportLintDeclaredNotReferenced(l),
+			s99term.F("code", validate.CodeDeclaredNotReferenced))
+
+		rows := make([][]string, 0, len(unused))
 		for _, key := range unused {
-			fmt.Fprintf(&b, "  %s\n", key)
+			rows = append(rows, []string{key})
 		}
-		b.WriteString("\n  A key built at runtime looks unused. Declare it under dynamicKeys\n")
-		b.WriteString("  rather than deleting it.\n")
-		a.block(b.String())
+		a.block(a.table([]string{catalog.ReportLintColumnKey(l)}, rows))
+		a.warns(s99term.StatusNone, catalog.ReportLintDynamicHint(l))
 	}
 
 	if len(missing)+len(unused) == 0 {
-		a.says(s99term.StatusOK, catalog.ReportLintClean(a.say()))
+		a.says(s99term.StatusOK, catalog.ReportLintClean(l))
 	}
 	return verdict
 }
@@ -303,4 +320,12 @@ func references(ctx context.Context, cfg *config.Config, set *message.Set) (*sca
 		GoNames:   generate.GoNames(cfg, set),
 		Extra:     extra,
 	})
+}
+
+func referenceRows(refs []scan.Reference) [][]string {
+	rows := make([][]string, 0, len(refs))
+	for _, ref := range refs {
+		rows = append(rows, []string{ref.Key, fmt.Sprintf("%s:%d", ref.File, ref.Line)})
+	}
+	return rows
 }

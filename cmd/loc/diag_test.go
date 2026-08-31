@@ -174,12 +174,15 @@ func TestContextWordsRenderInEveryLocale(t *testing.T) {
 		a.words = l
 
 		var override, mismatch string
+		var pairs []validate.Pair
 		for _, d := range report.Diagnostics {
 			switch d.Code {
 			case validate.CodeOverride:
 				override += a.renderDiagnostic(d)
+				pairs = append(pairs, d.Context...)
 			case validate.CodePlaceholder:
 				mismatch += a.renderDiagnostic(d)
+				pairs = append(pairs, d.Context...)
 			}
 		}
 		// The earlier root was shadowed by the later one, so each label carries its own root's path.
@@ -192,8 +195,11 @@ func TestContextWordsRenderInEveryLocale(t *testing.T) {
 		if !strings.Contains(mismatch, catalog.DiagLabelNone(l)) {
 			t.Errorf("%s: an empty placeholder set does not say %q:\n%s", locale, catalog.DiagLabelNone(l), mismatch)
 		}
-		if strings.Contains(override+mismatch, "\n  : ") {
-			t.Errorf("%s: a context line has no label:\n%s%s", locale, override, mismatch)
+		// A table cell cannot show a missing label, so the label is checked where it is resolved.
+		for _, p := range pairs {
+			if diagLabel(l, p) == "" {
+				t.Errorf("%s: %+v renders no label:\n%s%s", locale, p, override, mismatch)
+			}
 		}
 	}
 }

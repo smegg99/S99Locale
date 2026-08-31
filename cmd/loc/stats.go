@@ -45,72 +45,85 @@ func cmdStats(ctx context.Context, a *app) error {
 	a.warns(s99term.StatusNone, catalog.ReportStatsLocales(l), s99term.F("locales", strings.Join(cfg.Locales, ", ")))
 	a.warns(s99term.StatusNone, catalog.ReportStatsMessages(l), s99term.F("count", strconv.Itoa(len(keys))))
 
-	printByNamespace(a, set, keys, cfg.DefaultLocale)
-	printByTarget(a, cfg, set, keys)
-	printMissing(a, cfg, set, keys)
+	a.counts(catalog.ReportStatsByNamespace(l), byNamespace(set, keys, cfg.DefaultLocale))
+	a.counts(catalog.ReportStatsByTarget(l), byTarget(cfg, set, keys))
+	a.counts(catalog.ReportStatsMissing(l), missingCounts(cfg, set, keys))
 
 	out, err := generate.Build(ctx, cfg, set)
 	if err != nil {
 		return err
 	}
-	printSizes(a, cfg, out)
+	a.sizes(cfg, out)
 	return nil
 }
 
-func printByNamespace(a *app, set *message.Set, keys []string, base string) {
+// counts prints one titled count table, the shape all three stats tables share.
+func (a *app) counts(title string, rows map[string]int) {
+	l := a.say()
+
+	built := make([][]string, 0, len(rows))
+	for _, name := range sortedCountKeys(rows) {
+		built = append(built, []string{name, strconv.Itoa(rows[name])})
+	}
+
+	a.warns(s99term.StatusNone, title)
+	a.block(a.table([]string{catalog.ReportStatsColumnName(l), catalog.ReportStatsColumnCount(l)}, built))
+}
+
+func byNamespace(set *message.Set, keys []string, base string) map[string]int {
 	counts := map[string]int{}
 	for _, key := range keys {
 		if m, ok := set.Get(base, key); ok {
 			counts[m.Namespace]++
 		}
 	}
-
-	a.warns(s99term.StatusNone, catalog.ReportStatsByNamespace(a.say()))
-	for _, ns := range sortedCountKeys(counts) {
-		a.warns(s99term.StatusNone, ns, s99term.F("count", strconv.Itoa(counts[ns])))
-	}
+	return counts
 }
 
-func printByTarget(a *app, cfg *config.Config, set *message.Set, keys []string) {
-	a.warns(s99term.StatusNone, catalog.ReportStatsByTarget(a.say()))
+func byTarget(cfg *config.Config, set *message.Set, keys []string) map[string]int {
+	counts := map[string]int{}
 	for _, target := range cfg.Targets {
-		count := 0
+		counts[string(target)] = 0
 		for _, key := range keys {
 			if m, ok := set.Get(cfg.DefaultLocale, key); ok && cfg.Wants(m, target) {
-				count++
+				counts[string(target)]++
 			}
 		}
-		a.warns(s99term.StatusNone, string(target), s99term.F("count", strconv.Itoa(count)))
 	}
+	return counts
 }
 
-func printMissing(a *app, cfg *config.Config, set *message.Set, keys []string) {
-	a.warns(s99term.StatusNone, catalog.ReportStatsMissing(a.say()))
+func missingCounts(cfg *config.Config, set *message.Set, keys []string) map[string]int {
+	counts := map[string]int{}
 	for _, locale := range cfg.Locales {
-		missing := 0
+		counts[locale] = 0
 		for _, key := range keys {
 			if _, ok := set.Get(locale, key); !ok {
-				missing++
+				counts[locale]++
 			}
 		}
-		a.warns(s99term.StatusNone, locale, s99term.F("count", strconv.Itoa(missing)))
 	}
+	return counts
 }
 
-// printSizes has one row per target, because each target is its own tree.
-func printSizes(a *app, cfg *config.Config, out *generate.Outputs) {
-	a.warns(s99term.StatusNone, catalog.ReportStatsGeneratedSize(a.say()))
+// sizes prints one row per target with its generated size, since each target is its own tree.
+func (a *app) sizes(cfg *config.Config, out *generate.Outputs) {
+	l := a.say()
 
 	total := 0
+	rows := make([][]string, 0, len(cfg.Targets)+1)
 	for _, target := range cfg.Targets {
 		size := 0
 		for _, f := range out.For(target).Files() {
 			size += len(f.Bytes)
 		}
 		total += size
-		a.warns(s99term.StatusNone, string(target), s99term.F("size", humanBytes(size)))
+		rows = append(rows, []string{string(target), humanBytes(size)})
 	}
-	a.warns(s99term.StatusNone, catalog.ReportStatsTotal(a.say()), s99term.F("size", humanBytes(total)))
+	rows = append(rows, []string{catalog.ReportStatsTotal(l), humanBytes(total)})
+
+	a.warns(s99term.StatusNone, catalog.ReportStatsGeneratedSize(l))
+	a.block(a.table([]string{catalog.ReportStatsColumnName(l), catalog.ReportStatsColumnSize(l)}, rows))
 }
 
 func humanBytes(n int) string {
