@@ -154,6 +154,9 @@ func casesJSON(t *testing.T, out *generate.Outputs, locales []string) string {
 	return b.String()
 }
 
+// nodeFloor matches the justfile's check-node recipe.
+const nodeFloor = 24
+
 func requireNode(t *testing.T) string {
 	t.Helper()
 
@@ -162,13 +165,12 @@ func requireNode(t *testing.T) string {
 		t.Skip("node not on PATH; cannot check the generated index against CLDR")
 	}
 
-	// Running TypeScript without a flag landed in Node 23.
 	out, err := exec.Command(node, "--version").Output()
 	if err != nil {
 		t.Skipf("node --version: %v", err)
 	}
-	if nodeMajor(string(out)) < 23 {
-		t.Skipf("node %s runs no TypeScript; need 23 or newer", strings.TrimSpace(string(out)))
+	if nodeMajor(string(out)) < nodeFloor {
+		t.Skipf("node %s is below the %d floor", strings.TrimSpace(string(out)), nodeFloor)
 	}
 	return node
 }
