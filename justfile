@@ -6,9 +6,9 @@ default:
     @just --list
 
 # Run every check.
-check: check-fmt vet check-node check-locales test race build check-example
+check: check-fmt vet check-node check-locales check-doc-comments test race build check-example
 
-# Fail when a Go file is not gofmt clean, because a formatter that rewrites can never fail a gate.
+# Fail when a Go file is not gofmt clean.
 check-fmt:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -18,6 +18,10 @@ check-fmt:
         echo "$unformatted" >&2
         exit 1
     fi
+
+# Fail when a doc comment carries a paragraph break.
+check-doc-comments:
+    ./scripts/doc-comments.sh
 
 # Rewrite every Go file into gofmt form.
 fmt:

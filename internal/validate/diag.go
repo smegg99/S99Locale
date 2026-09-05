@@ -1,10 +1,6 @@
 // internal/validate/diag.go
 
 // Package validate compares messages across locales.
-//
-// Every failure it catches is invisible at runtime: a missing translation
-// renders the key, a wrong placeholder renders nothing, and a missing plural
-// band renders the wrong case.
 package validate
 
 import (
@@ -21,10 +17,7 @@ const (
 	SevWarning Severity = "warning"
 )
 
-// Codes. Stable, because they end up in suppression comments and CI output.
-//
-// 001, 002 and 004 are raised during parsing and forwarded by Run; they
-// are declared in parse so there is one definition of each.
+// Codes are stable: they appear in suppression comments and CI output. Parse codes live in parse.
 const (
 	CodeYAML           = parse.CodeYAML
 	CodeSchema         = parse.CodeSchema

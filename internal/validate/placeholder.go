@@ -7,10 +7,7 @@ import (
 	"unicode"
 )
 
-// Placeholders extracts {name} occurrences, in order of appearance.
-//
-// Hand-rolled rather than a regexp because it also has to skip {{ }}, which
-// vue-i18n uses for literal braces and which must never be read as a name.
+// Placeholders extracts {name} occurrences in order, skipping vue-i18n's {{ }} literal braces.
 func Placeholders(text string) []string {
 	var out []string
 
@@ -53,10 +50,7 @@ func valid(name string) bool {
 	return true
 }
 
-// GoField is the Go template field a placeholder becomes: email -> Email.
-//
-// go-i18n interpolates with text/template, so {name} has to become {{.Name}}.
-// Two names that differ only in case collide here, which validation reports.
+// GoField is the Go template field a placeholder becomes, email -> Email.
 func GoField(name string) string {
 	if name == "" {
 		return ""

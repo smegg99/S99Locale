@@ -77,10 +77,7 @@ func newLintCmd(a *app) *cobra.Command {
 	return cmd
 }
 
-// cmdLintShared reports keys that may be one message.
-//
-// Only high confidence is shown by default; medium and low are right often
-// enough to keep but wrong often enough to hide behind --verbose.
+// cmdLintShared reports keys that may be one message; medium and low confidence need --verbose.
 func cmdLintShared(ctx context.Context, a *app, verbose, asJSON bool) error {
 	cfg, set, err := loadAndReport(ctx, a)
 	if err != nil {

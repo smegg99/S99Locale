@@ -19,15 +19,7 @@ const (
 	keysFileName    = "keys.gen.ts"
 )
 
-// Plurals writes the vue-i18n index function.
-//
-// vue-i18n counts in two and Polish counts in four, so without this every
-// Polish count renders the wrong case and nothing at runtime notices.
-//
-// The band order comes from the same rule table as the pipe strings, so the
-// two cannot drift apart. Which band a count lands in comes from
-// Intl.PluralRules, not from a rule written here: go-i18n selects by CLDR, so
-// anything else would make the browser and the backend disagree.
+// Plurals writes the vue-i18n index function; Intl.PluralRules selects bands as go-i18n does.
 func Plurals(out *Output, cfg *config.Config) error {
 	var b strings.Builder
 

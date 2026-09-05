@@ -9,24 +9,14 @@ import (
 	"strings"
 )
 
-// VERSION is the single source of truth. Embedding it rather than copying the
-// number into a Go constant means there is no second place to update and so no
-// drift to check for. It lives at the module root because go:embed cannot reach
-// up a directory, which is also why this package exists.
-//
 //go:embed VERSION
 var versionFile string
 
-// Declared returns the version written in VERSION.
+// Declared returns the version embedded from VERSION at the module root.
 func Declared() string { return strings.TrimSpace(versionFile) }
 
-// Version is what `loc --version` prints: the declared version, plus the commit
-// it was built from when that is knowable.
-//
-// A module downloaded by `go install` is not a git worktree, so it carries no
-// revision and reports the bare version - which is exactly right, because the
-// tag it was installed at is what identifies it. A local build gets the commit
-// and a dirty marker instead, so a CI log can name the binary that ran.
+// Version is what `loc --version` prints: the declared version plus a local build's commit and
+// dirty marker.
 func Version() string {
 	rev, dirty, ok := revision()
 	if !ok {

@@ -1,10 +1,6 @@
 // internal/generate/write.go
 
-// Package generate turns the neutral AST into per-target bundles.
-//
-// Every writer here is deterministic and atomic: two builds on the same input
-// produce identical bytes, and a build that dies halfway leaves no truncated
-// file behind.
+// Package generate turns the neutral AST into deterministic, atomically written per-target bundles.
 package generate
 
 import (

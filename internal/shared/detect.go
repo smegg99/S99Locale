@@ -50,10 +50,7 @@ type Candidate struct {
 	ReasonArgs map[string]any `json:"reasonArgs,omitempty"`
 }
 
-// Detect finds duplicate message contracts.
-//
-// Hashes index the search; equality is always confirmed by comparing the whole
-// fingerprint, because a collision would merge two unrelated strings.
+// Detect finds duplicate message contracts, indexing by hash and confirming on the fingerprint.
 func Detect(cfg *config.Config, set *message.Set) []Candidate {
 	prints := map[string]Fingerprint{}
 
@@ -180,13 +177,7 @@ func sameTargets(cfg *config.Config, a, b *message.Message) bool {
 	return true
 }
 
-// textGroups finds keys whose text matches but whose contract does not.
-//
-// Two cases, graded apart because conflating them would mislabel both:
-//
-//   - matches in every locale, only the placeholder or plural contract differs
-//   - matches in the default locale only, which says almost nothing: "Open"
-//     the verb and "Open" the state are one word in English alone
+// textGroups finds keys whose text matches but whose contract does not; gradeText separates them.
 func textGroups(cfg *config.Config, keys []string, prints map[string]Fingerprint,
 	already []Candidate) []Candidate {
 

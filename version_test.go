@@ -50,11 +50,8 @@ func TestVersionStartsWithTheDeclaredVersion(t *testing.T) {
 	}
 }
 
-// A tag is what `go install ...@v0.1.0` resolves, so a tagged commit whose
-// VERSION says something else ships a binary that misreports itself.
-//
-// Only exact tags are checked. An untagged commit is ordinary work in progress,
-// not a contradiction.
+// A tagged commit's VERSION must match the tag `go install ...@vX` resolves; untagged commits
+// are skipped.
 func TestTagAgreesWithVersionFile(t *testing.T) {
 	tag, ok := exactTag()
 	if !ok {

@@ -1,9 +1,6 @@
 // internal/parse/parse.go
 
-// Package parse turns canonical YAML into the neutral AST.
-//
-// A message that does not fit the schema becomes a diagnostic, never a
-// silently dropped key.
+// Package parse turns canonical YAML into the neutral AST, reporting invalid messages.
 package parse
 
 import (
@@ -65,10 +62,7 @@ func (e Error) Error() string {
 	return strings.Join(parts, ": ")
 }
 
-// Roots parses every root in order. Later roots override earlier ones.
-//
-// ctx is checked per file rather than per line: a locale file parses in
-// microseconds, so finer granularity buys nothing but noise.
+// Roots parses every root in order, later roots overriding earlier ones, checking ctx per file.
 func Roots(ctx context.Context, roots []string, locales []string) (*Result, error) {
 	res := &Result{Set: message.NewSet(locales)}
 
@@ -188,12 +182,10 @@ func parseFile(res *Result, dir, file, locale string, root int) {
 
 // walk descends the document. A node holding "value" or "plural" is a message;
 // anything else is another level of key.
-//
-// key is the fully qualified name, which carries the file's own prefix; path is
-// where the node sits inside this file, which is what the line index knows.
 func walk(res *Result, node map[string]any, prefix, path, file, locale string, root int, lines lineFinder) {
 	for _, name := range sortedMapKeys(node) {
 		child, ok := node[name].(map[string]any)
+		// key is fully qualified; here is the node's path inside this file, for lines.
 		key := joinKey(prefix, name)
 		here := joinKey(path, name)
 

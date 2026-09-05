@@ -1,9 +1,6 @@
 // internal/config/config.go
 
-// Package config loads i18n/config.cue.
-//
-// CUE validates the shape, so an unknown target or a missing locale fails at
-// load rather than halfway through a build with half the files written.
+// Package config loads and validates i18n/config.cue.
 package config
 
 import (

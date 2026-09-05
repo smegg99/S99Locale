@@ -1,11 +1,6 @@
 // internal/shared/fingerprint.go
 
-// Package shared finds keys that say the same thing in every language.
-//
-// Two keys with the same English text are not the same message: `file.open`
-// and `store.status.open` are both "Open" in English and nothing alike in
-// Polish. So every judgement here compares the whole contract across every
-// locale, not just the default one.
+// Package shared finds keys whose whole contract matches across every locale.
 package shared
 
 import (
@@ -30,10 +25,7 @@ type NormalizedPlural struct {
 	Categories []message.Category
 }
 
-// Fingerprint is a message's full contract.
-//
-// Compared in whole, never by hash alone: a hash collision here would merge
-// two unrelated strings across an entire app.
+// Fingerprint is a message's full contract, compared in whole and never by hash alone.
 type Fingerprint struct {
 	Kind         message.Kind
 	Translations map[string]string
@@ -41,10 +33,7 @@ type Fingerprint struct {
 	Plural       *NormalizedPlural
 }
 
-// Of builds a fingerprint from one key across every locale.
-//
-// Returns false when the key is missing from a locale: an incomplete message
-// cannot be compared, and validation has already reported it.
+// Of builds a fingerprint from one key across every locale, or returns false when one lacks it.
 func Of(set *message.Set, key string, locales []string) (Fingerprint, bool) {
 	fp := Fingerprint{Translations: map[string]string{}}
 
@@ -68,11 +57,7 @@ func Of(set *message.Set, key string, locales []string) (Fingerprint, bool) {
 	return fp, true
 }
 
-// normalizeText joins everything a message renders, in a stable order.
-//
-// Line endings and surrounding whitespace go; they cannot change the words.
-// Internal spacing stays, because "a  b" versus "a b" is a difference this
-// package should not decide about.
+// normalizeText joins a message's text in a stable order, trimming outer whitespace only.
 func normalizeText(m *message.Message) string {
 	parts := make([]string, 0, 4)
 	for _, text := range m.Text() {

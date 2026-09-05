@@ -9,11 +9,7 @@ import (
 	"github.com/smegg99/s99locale/internal/message"
 )
 
-// vocabulary is the controlled shared namespace, keyed on the lowercased
-// default-locale text.
-//
-// Deliberately short: it is what stops a suggestion inventing a key, and
-// `common` as an open list is how a shared key ends up meaning four things.
+// vocabulary is the controlled shared namespace, keyed on lowercased default-locale text.
 var vocabulary = map[string]string{
 	"ok":        "common.action.accept",
 	"accept":    "common.action.accept",
@@ -37,11 +33,7 @@ var vocabulary = map[string]string{
 	"previous":  "common.navigation.previous",
 }
 
-// Suggest proposes a shared key, or returns empty when it cannot.
-//
-// Only answers for text in the controlled vocabulary, and only for a plain
-// string with no placeholders: an interpolated or counted message carries
-// context a generic name would lose.
+// Suggest proposes a shared key, or returns empty for anything but a plain vocabulary string.
 func Suggest(cfg *config.Config, set *message.Set, group []string) string {
 	base, ok := set.Get(cfg.DefaultLocale, group[0])
 	if !ok {

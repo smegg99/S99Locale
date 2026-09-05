@@ -1,9 +1,6 @@
 // internal/scan/scan.go
 
-// Package scan finds translation keys referenced in source.
-//
-// Static references only: `t('status.' + state)` is unreachable from here, so
-// a key with no reference is reported, never deleted.
+// Package scan finds translation keys that source files reference statically.
 package scan
 
 import (
@@ -53,32 +50,19 @@ func (r *Result) Keys() []string {
 	return out
 }
 
-// frontend matches the vue-i18n family: t, $t, te, tm, and the composable's
-// own name. The key must look like a key, or every t('hello world') in a
-// comment becomes a false positive.
+// frontend matches t, $t, te and tm with a key-shaped first argument.
 var frontend = regexp.MustCompile(`\$?\b(?:t|te|tm)\(\s*['"` + "`" + `]([a-zA-Z][\w.]*)['"` + "`" + `]`)
 
-// goKey matches the generated key constants, for Go naming a key it does not
-// render itself.
+// goKey matches the generated key constants.
 var goKey = regexp.MustCompile(`\bKey([A-Z]\w*)\b`)
 
-// apierrKey matches the message key in an error envelope.
-//
-// These are the keys a user actually reads: the envelope carries a machine
-// code and an i18n key, and the frontend resolves the key into the dialog. An
-// undeclared one renders as itself, which is the most visible way a missing
-// translation can fail.
+// apierrKey matches the i18n key an apierr envelope carries beside its machine code.
 var apierrKey = regexp.MustCompile(`apierr\.(?:New|Wrap)\([^)]*?["` + "`" + `]([a-z][\w.]*\.[\w.]+)["` + "`" + `]`)
 
-// goAccessor matches a call to a generated accessor.
-//
-// Any exported identifier followed by a paren; the GoNames map is what decides
-// whether it is one of ours. Constraining the first argument instead only
-// worked when the localizer happened to be called `l`, and real code calls it
-// whatever the locale is.
+// goAccessor matches any exported call; GoNames decides whether it is a generated accessor.
 var goAccessor = regexp.MustCompile(`\b([A-Z]\w*)\s*\(`)
 
-// skipDirs are never worth walking and are usually enormous.
+// skipDirs are never walked.
 var skipDirs = map[string]bool{
 	"node_modules": true,
 	".git":         true,
@@ -237,10 +221,7 @@ func scanFile(res *Result, path string, goNames map[string]string, extra []*rege
 	return scanner.Err()
 }
 
-// Unused returns declared keys nothing references.
-//
-// Dynamic keys are excluded, because no scan can see them. The rest may be
-// genuinely dead or a call this cannot parse, so it is only ever a warning.
+// Unused returns declared keys nothing references, minus dynamic ones; it is a warning.
 func Unused(declared []string, res *Result, dynamic []string) []string {
 	skip := map[string]bool{}
 	for _, key := range dynamic {

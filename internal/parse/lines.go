@@ -10,18 +10,10 @@ import (
 	"github.com/smegg99/s99locale/internal/message"
 )
 
-// MaxFileSize is the largest locale file the line index will scan. Beyond it
-// bufio.Scanner fails with "token too long", which names neither the file nor
-// the reason, so parse checks the size first and says so itself.
+// MaxFileSize is the largest locale file the line index scans; bufio.Scanner fails beyond it.
 const MaxFileSize = 4 << 20
 
-// lineFinder locates a key in the raw bytes, by its dotted path within the
-// file.
-//
-// The YAML decoder gives a plain map, so positions have to come from the text.
-// Keyed on the whole path rather than the leaf name because `title` appears
-// under every section of a real locale file, and a diagnostic that points at
-// the first one sends the reader to the wrong line with no hint that it did.
+// lineFinder locates a key's line in the raw bytes, keyed on the full dotted path.
 type lineFinder map[string][2]int
 
 // open is a key the scanner is currently inside, with the column it started at.

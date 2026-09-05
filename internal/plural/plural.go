@@ -1,10 +1,6 @@
 // internal/plural/plural.go
 
-// Package plural knows which categories a locale actually has.
-//
-// Polish counts in four and vue-i18n counts in two, so a wrong band here is
-// wrong in every counted string and nothing at runtime notices: the count
-// reads as the wrong case, the way "2 entrys" reads in English.
+// Package plural knows which CLDR plural categories each locale has.
 package plural
 
 import (
@@ -21,11 +17,7 @@ type Rule struct {
 	Required []message.Category
 }
 
-// rules holds CLDR cardinal categories per language.
-//
-// Taken from CLDR, cross-checked against go-i18n v2.6.1's generated rules so
-// the two halves of a build cannot disagree about what "few" means. Which band
-// a count selects is not decided here - see generate.Plurals.
+// rules holds the CLDR cardinal categories per language, matching go-i18n v2.6.1.
 var rules = map[string]Rule{
 	"en": {Required: []message.Category{message.CatOne, message.CatOther}},
 	"pl": {Required: []message.Category{message.CatOne, message.CatFew, message.CatMany, message.CatOther}},
@@ -115,11 +107,7 @@ func (r Rule) Extra(p *message.Plural) []message.Category {
 	return out
 }
 
-// Bands is the order forms are written into a vue-i18n pipe string, filtered
-// to what this message declares.
-//
-// The order is a private contract between the generated string and the
-// generated index function. Nothing hand-written depends on it.
+// Bands is the pipe-string form order, filtered to the categories this message declares.
 func (r Rule) Bands(p *message.Plural) []message.Category {
 	var out []message.Category
 	for _, c := range message.CategoryOrder {

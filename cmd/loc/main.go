@@ -1,10 +1,6 @@
 // cmd/loc/main.go
 
-// loc: one canonical locale source, compiled into per-target bundles.
-//
-// The backend wants flat keys and {{.Name}}; the frontend wants nested keys,
-// {name} and pipe-separated plural bands. Writing both by hand is how a string
-// drifts and how a Polish count silently renders the wrong case.
+// Command loc compiles one canonical locale source into backend and frontend locale files.
 package main
 
 import (

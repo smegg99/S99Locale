@@ -12,12 +12,7 @@ import (
 	"github.com/smegg99/s99locale/internal/plural"
 )
 
-// Vue writes vue-i18n resources for one target, split by locale and namespace
-// so the app can lazy-load a chunk at a time.
-//
-// Placeholders pass through untouched: canonical {name} is already vue-i18n's
-// syntax. Plurals become a pipe string whose band order only the generated
-// index function knows.
+// Vue writes vue-i18n resources for one target, split by locale and namespace for lazy loading.
 func Vue(out *Output, cfg *config.Config, set *message.Set) error {
 	for _, locale := range cfg.Locales {
 		rule, err := plural.For(locale)
@@ -79,11 +74,8 @@ func vueText(m *message.Message, rule plural.Rule) (string, error) {
 	return strings.Join(parts, " | "), nil
 }
 
-// nest turns common.action.accept into {common: {action: {accept: ...}}},
-// which is the shape vue-i18n expects.
-//
-// The namespace segment stays in the tree: the app registers each file under
-// its own name, and dropping it would make two namespaces collide at the root.
+// nest turns common.action.accept into {common: {action: {accept: ...}}} for vue-i18n.
+// The namespace segment stays so two namespaces cannot collide at the root.
 func nest(root map[string]any, key string, value string) error {
 	parts := strings.Split(key, ".")
 

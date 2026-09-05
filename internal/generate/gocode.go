@@ -12,10 +12,7 @@ import (
 	"github.com/smegg99/s99locale/internal/validate"
 )
 
-// GoCode writes typed accessors over go-i18n.
-//
-// go-i18n's TemplateData is map[string]any, so a misspelled placeholder
-// compiles and renders nothing. These wrappers make it a compile error.
+// GoCode writes typed accessors over go-i18n, so a misspelled placeholder is a compile error.
 func GoCode(out *Output, cfg *config.Config, set *message.Set) error {
 	if cfg.Go.Package == "" {
 		return nil

@@ -2,10 +2,7 @@
 
 package generate
 
-// runtimeSource is the helper block emitted into messages_gen.go.
-//
-// Generated rather than shipped as an importable package, so a consuming app
-// depends on go-i18n alone and never on loc.
+// runtimeSource is emitted into messages_gen.go so the generated file imports only go-i18n.
 const runtimeSource = `
 func plain(l *i18n.Localizer, id string) string {
 	out, err := l.Localize(&i18n.LocalizeConfig{MessageID: id})

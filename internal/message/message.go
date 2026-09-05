@@ -1,10 +1,6 @@
 // internal/message/message.go
 
-// Package message is the neutral AST.
-//
-// Nothing here knows about vue-i18n or go-i18n. A canonical message is parsed
-// into these types once and every generator reads from them, so no runtime's
-// syntax reaches the source files.
+// Package message is the neutral AST every generator reads.
 package message
 
 import "fmt"

@@ -20,11 +20,7 @@ import (
 	"github.com/smegg99/s99locale/internal/config"
 )
 
-// debounce is how long to wait after the last event.
-//
-// An editor writes a file as several operations - truncate, write, rename - and
-// rebuilding on each produces three builds and two of them read a half-written
-// file.
+// debounce covers the several writes an editor makes for one save.
 const debounce = 150 * time.Millisecond
 
 func newWatchCmd(a *app) *cobra.Command {
@@ -45,10 +41,7 @@ func newWatchCmd(a *app) *cobra.Command {
 	return cmd
 }
 
-// cmdWatch rebuilds on change until interrupted.
-//
-// A validation error prints and the watcher keeps going: a half-typed key is
-// the normal state of a file being edited.
+// cmdWatch rebuilds on change until interrupted; a validation error prints and watching goes on.
 func cmdWatch(ctx context.Context, a *app) error {
 	cfg, err := config.Load(ctx, a.opts.configPath)
 	if err != nil {

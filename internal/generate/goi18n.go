@@ -12,10 +12,7 @@ import (
 	"github.com/smegg99/s99locale/internal/validate"
 )
 
-// GoBundle writes one flat go-i18n file per locale.
-//
-// go-i18n interpolates with text/template, so canonical {name} becomes
-// {{.Name}} here rather than in the source, which also has to reach vue-i18n.
+// GoBundle writes one flat go-i18n file per locale, rewriting {name} to {{.Name}}.
 func GoBundle(out *Output, cfg *config.Config, set *message.Set) error {
 	for _, locale := range cfg.Locales {
 		rule, err := plural.For(locale)
