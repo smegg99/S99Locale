@@ -4,14 +4,14 @@
 
 ```
 i18n/
-├── config.cue
-└── locales/
-    ├── en/
-    │   ├── common.yaml
-    │   └── auth/
-    │       └── login.yaml
-    └── pl/
-        └── ...
+  config.cue
+  locales/
+    en/
+      common.yaml
+      auth/
+        login.yaml
+    pl/
+      ...
 ```
 
 The path forms the key prefix. `en/auth/login.yaml` holding `title:` produces
@@ -61,7 +61,6 @@ reeds:
   plural:
     argument: count
     forms:
-      zero: "brak głosów"
       one:  "{count} głos"
       few:  "{count} głosy"
       many: "{count} głosów"
@@ -71,31 +70,13 @@ reeds:
 ```
 
 `argument` names the counted placeholder, per message: real sources use both
-`count` and `n`. It must be declared as an `integer` (I18N018) - the generated
-Go passes it to go-i18n as the count.
+`count` and `n`. It must be declared as an `integer` (I18N018), because the
+generated Go passes it to go-i18n as the count.
 
-A `zero` band is all locales or none (I18N019). The required categories differ
-by locale on purpose; `zero` is a choice about the message, not about a
-language.
-
-A form may carry other placeholders too - `"{banks} banks and {registers}
+A form may carry other placeholders too: `"{banks} banks and {registers}
 registers"` is fine.
 
 See [plurals.md](plurals.md) for which categories each locale requires.
-
-### Metadata
-
-```yaml
-targets: [backend, web]     # overrides the namespace, does not add to it
-                            # each must be a configured target (I18N006)
-deprecated: true
-sharing:
-  isolate: true
-  reason: "wording may diverge between contexts in other languages"
-```
-
-`sharing.isolate` suppresses shared-message suggestions. Under `--strict` it
-needs a reason.
 
 ## Config
 

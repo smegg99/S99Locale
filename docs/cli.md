@@ -1,43 +1,61 @@
 # CLI
 
 ```
-loc build      validate and generate every configured target
-loc check      validate and confirm the output is current. Never writes
-loc stats      counts by namespace, target and locale, plus bundle sizes
-loc lint       report messages that may be duplicates
-loc watch      rebuild on every change until interrupted
-loc refactor-shared   plan a rename, as a patch
-loc clean      remove generated artefacts
+loc build             validate and generate every configured target
+loc check             validate and confirm the output is current. Never writes
+loc stats             counts by namespace, target and locale, plus bundle sizes
+loc lint shared       keys that may belong in a shared namespace
+loc lint keys         unused and missing keys, from a source scan
+loc lint duplicates   exact duplicate contracts, whatever they are named
+loc watch             rebuild on every change until interrupted
+loc clean             remove what the build record names
 ```
 
-Flags:
+Persistent flags:
 
 ```
--c, --config path   config file (default i18n/config.cue)
-    --strict        warnings fail the build
-    --quiet         suppress success output; diagnostics are unaffected
--v, --version       print the version and exit
+-c, --config path        config file (default i18n/config.cue)
+    --quiet              suppress success output; diagnostics are unaffected
+    --lang code          render in this language
+    --color auto|always|never
+-v, --version            print the version and exit
 ```
 
-`check` and the `lint` subcommands also take `--json`.
+Per-command flags:
 
-Errors always fail. Warnings fail only under `--strict`.
+```
+build --strict           warnings fail the build
+check --strict --json
+watch --strict
+lint --strict --json     inherited by shared, keys and duplicates
+lint shared --verbose    include medium and low confidence findings
+```
+
+`--strict` is on the four commands that act on it and nowhere else. Errors
+always fail. Warnings fail only under `--strict`, and `lint keys --strict`
+fails on an unused or missing key.
+
+Language precedence: `--lang`, then `LOC_LANG`, `LC_ALL`, `LC_MESSAGES`,
+`LANG`, then English. An unsupported `--lang` is a usage error and exits 2; an
+unsupported `LOC_LANG` falls back to English.
 
 ## Install
 
 ```sh
-go install github.com/smegg99/s99locale/cmd/loc@v0.1.0
+go get -tool github.com/smegg99/s99locale/cmd/loc@v1.0.0
+go tool loc build -c i18n/config.cue
 ```
 
-Pin the version. The binary is `cmd/loc`, so `go install` names it `loc`.
+The version is pinned in the consuming repository's own `go.mod`, so every
+machine that builds it runs the same `loc`.
 
-`loc --version` reports what is running - `0.1.0` from a tagged install,
-`0.1.0 (a22e8d3, dirty)` from a working tree - so a CI log says which binary
-produced a result.
+`loc --version` prints `loc 1.0.0` from a pinned tool directive and
+`loc 1.0.0 (a22e8d3, dirty)` from a working tree.
 
-Runs touching one output directory serialise on an advisory lock, so `loc watch`
-and a manual `loc build` cannot interleave. `check` takes a shared lock, so
-concurrent checks do not queue behind each other.
+Runs serialise on one advisory lock per target directory, so `loc watch` and a
+manual `loc build` cannot interleave. `check` takes shared locks, so concurrent
+checks do not queue behind each other. A run that has to wait says so, and
+ctrl-c ends the wait.
 
 ## Exit codes
 
@@ -56,33 +74,42 @@ only when it needs detail.
   "current": false,
   "files": 0,
   "stale": [],
+  "modified": [],
   "errors": 1,
   "warnings": 0,
   "diagnostics": [
     {
       "code": "I18N005",
       "severity": "error",
+      "message": "missingKey",
+      "args": {"base": "en", "locale": "pl"},
       "key": "common.cancel",
       "locale": "pl",
-      "source": {"file": "i18n/locales/en/common.yaml", "line": 2, "col": 1},
-      "detail": "missing from pl; it exists in en"
+      "source": {"file": "i18n/locales/en/common.yaml", "line": 2, "col": 1}
     }
   ]
 }
 ```
+
+`message` is the catalogue key for the sentence and `args` are its
+placeholders, because one code is raised at several sites that say different
+things. A diagnostic that wraps a third-party parser's own text carries it in
+`cause`, untranslated. `stale` is what `loc build` would rewrite; `modified` is
+what it refuses to touch.
 
 ## Config reference
 
 ```cue
 defaultLocale: "en"              // must appear in locales
 locales: ["en", "pl"]            // each needs a plural rule
-targets: ["web", "backend"]      // web | backend | desktop
+targets: ["web", "backend"]      // web | backend
 
 roots: [                         // later roots override earlier ones
 	"../S99AB/i18n/locales",
 	"locales",
 ]
 output: "generated"              // relative to the config file
+outputs: {backend: "../backend/common/messages"}  // one directory per target
 
 namespaces: {
 	common: {targets: ["web"]}
@@ -91,18 +118,19 @@ namespaces: {
 
 dynamicKeys: ["status.pending"]  // built at runtime, so no scan can find them
 
-web: {
-	pluralsFile: "plurals.gen.ts"
-	keysFile:    "keys.gen.ts"
-}
 go: {package: "messages"}        // empty disables Go codegen
 ```
 
 Every relative path resolves against the config file's directory, so `loc` can
 run from anywhere.
 
-A namespace with no entry reaches every target. Shipping a spare string costs
-bytes; dropping one silently costs a translation.
+A target with no `outputs` entry is written to `<output>/<target>`. Two targets
+may not resolve to the same directory or to one inside the other, no target
+directory may hold a canonical root or a scan directory, a redirected target
+may not sit inside the `output` tree, and `output` itself must resolve below
+the config's own directory. Each is refused at load.
+
+A namespace with no entry reaches every target.
 
 ## Layered roots
 
@@ -129,10 +157,10 @@ build: locales
     go build -trimpath -o bin/app .
 
 locales:
-    loc build -c i18n/config.cue
+    go tool loc build -c i18n/config.cue
 
 check-locales:
-    loc check -c i18n/config.cue
+    go tool loc check -c i18n/config.cue
 ```
 
 ## CI
@@ -141,20 +169,15 @@ Run `loc check` before the tests. It fails when a translation is missing, a
 placeholder disagrees, a plural band is absent, or the generated output on disk
 is stale.
 
-`check` compares against the files that are there. A missing file counts as
-stale, so on a clean checkout with `generated/` gitignored it fails until
-something has run `loc build`:
+Generated output is committed, so `check` stands alone:
 
 ```just
-ci: locales check-locales test
-
-locales:
-    loc build -c i18n/config.cue
+check: check-locales test
 
 check-locales:
-    loc check -c i18n/config.cue
+    go tool loc check -c i18n/config.cue
+    go tool loc lint keys --strict -c i18n/config.cue
 ```
 
-Building first and then checking is what proves the build is deterministic: if
-`build` were not, `check` would find its own output stale. Commit `generated/`
-instead and `check` alone is enough.
+Running `build` then `check` also shows the build is deterministic. Keep
+`build` in a separate `locales` recipe, run after editing the canonical source.

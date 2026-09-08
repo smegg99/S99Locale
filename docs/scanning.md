@@ -8,16 +8,15 @@ scan: ["../web/app", "../../S99AB/src", "../api", "../core"]
 loc lint keys
 ```
 
-Reports three things:
+Reports two things:
 
 | code | meaning |
 |---|---|
-| I18N030 | referenced but not declared - renders the raw key |
-| I18N031 | a deprecated key is still referenced |
+| I18N030 | referenced but not declared; renders the raw key |
 | I18N032 | declared but not referenced |
 
-Nothing here fails a build. Scanning is **evidence, not truth**: dynamic keys
-exist, so an unused key is a warning and never a deletion.
+Neither fails by default. Dynamic keys exist, so an unused key is a warning,
+never a deletion. `lint keys --strict` turns both into a failure.
 
 ## What it recognises
 
@@ -81,5 +80,8 @@ scan: ["../web/app", "../../S99AB/src"]
 ## Skipped automatically
 
 `node_modules`, `.git`, `.nuxt`, `.output`, `dist`, `vendor`, `bin`,
-`testdata`, and the generated output directory - the generated bundles name
-every key, so scanning them would make the unused report permanently empty.
+`testdata`, and the `output` tree, because the generated bundles name every
+key.
+
+A target redirected by `outputs` shares its package with hand-written code, so
+it is walked. loc's own files there are skipped by their generated header line.

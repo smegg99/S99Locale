@@ -6,11 +6,25 @@ One canonical locale source. Compiles to per-target bundles.
 loc build      generate every configured target
 loc check      validate and confirm the output is current. CI
 loc stats      counts by namespace, target and locale
-loc clean      remove generated artefacts
+loc lint       unused, missing and duplicate keys
+loc watch      rebuild on every change until interrupted
+loc clean      remove what the build record names
 ```
 
 Exit 1 means the locales are wrong or the output is stale; exit 2 means `loc`
-could not run at all. `check` takes `--json` for CI.
+could not run at all. `check` and `lint` take `--json` for CI. `--lang` and
+`--color` are persistent.
+
+## Prerequisites
+
+- Go 1.27. `go.mod` names it and there is no toolchain pin.
+- `just`, for the recipes below. Every one of them is a plain command you can
+  also run by hand.
+- Node 24 or newer, for `just check` only. The CLDR plural test runs the
+  generated index against `Intl.PluralRules`, and `check-node` fails rather
+  than letting that test skip.
+
+Nothing else. `cue` is not needed: the schema is embedded in the binary.
 
 ## The problem
 
@@ -21,14 +35,26 @@ agree, and that each plural has the forms its locale needs.
 
 ## Install
 
+In a repository that uses loc, pin it as a tool:
+
 ```sh
-go install github.com/smegg99/s99locale/cmd/loc@v0.1.0   # pinned, for CI
-just install                                             # local, from source
+go get -tool github.com/smegg99/s99locale/cmd/loc@v1.0.0
+go tool loc build -c i18n/config.cue
 ```
 
-Pin a version in CI. `loc --version` reports what is actually running -
-`0.1.0` from a tagged install, `0.1.0 (a22e8d3, dirty)` from a working tree -
-so a log says which binary produced a result.
+There is no PATH install. The version lives in the consuming repository's own
+`go.mod`, so every machine that builds it runs the same `loc`. For a one-off
+run in a repository that does not pin it:
+
+```sh
+go run github.com/smegg99/s99locale/cmd/loc@v1.0.0 build -c i18n/config.cue
+```
+
+`loc --version` prints `loc 1.0.0` from a pinned tool directive and
+`loc 1.0.0 (a22e8d3, dirty)` from a working tree.
+
+`go tool loc` needs a warm module cache or a network. A build host that reads
+committed generated output needs neither.
 
 ## Messages
 
@@ -48,7 +74,6 @@ reeds:
   plural:
     argument: count
     forms:
-      zero: "brak głosów"
       one:  "{count} głos"
       few:  "{count} głosy"
       many: "{count} głosów"
@@ -56,8 +81,6 @@ reeds:
   placeholders:
     count: {type: integer}
 ```
-
-Optional per message: `targets`, `deprecated`, `sharing: {isolate, reason}`.
 
 Canonical files use `{name}` and nothing else.
 
@@ -67,12 +90,6 @@ CLDR Polish has four categories: one, few, many, other. English has two.
 Declaring a category a locale does not have is an error: a `few` in English is
 text no rule will ever select.
 
-`zero` is an **opt-in extra band, not a CLDR category**. No rule returns it:
-Polish resolves a count of 0 to `many`, so `0 głosów` is correct but `brak
-głosów` usually reads better. If one locale of a message declares `zero`, all
-must - that is I18N019, and it is the one part of a plural's shape that has to
-agree, since the required categories differ by locale on purpose.
-
 Which band a count lands in comes from `Intl.PluralRules` in the browser and
 from go-i18n on the backend. Both are CLDR, so the two sides cannot disagree.
 
@@ -80,23 +97,11 @@ Each runtime gets what it needs:
 
 | runtime | form |
 |---|---|
-| vue-i18n | `brak głosów \| {count} głos \| {count} głosy \| {count} głosów` |
-| go-i18n | `{one, few, many, other}` plus a separate `key.zero` message |
+| vue-i18n | `{count} głos \| {count} głosy \| {count} głosów \| {count} głosów` |
+| go-i18n | `{one, few, many, other}`, its own native categories |
 
 The pipe order is a contract between the generated strings and the generated
 `plurals.gen.ts`. Both are generated, so they stay in step.
-
-In Go the `zero` band is reachable only through the generated accessor:
-
-```go
-func ReedsFound(l *i18n.Localizer, p ReedsFoundParams) string {
-	// No CLDR rule selects "zero"; it is an opt-in band.
-	if p.Count == 0 {
-		return zeroForm(l, "tuner.reeds", data)
-	}
-	return withCount(l, "tuner.reeds", p.Count, data)
-}
-```
 
 ## Config
 
@@ -107,7 +112,13 @@ targets: ["web", "backend"]
 
 // Later roots override earlier ones. Every override is reported.
 roots: ["../S99AB/i18n/locales", "locales"]
+// Generated artefacts, committed. Relative to this file.
 output: "generated"
+
+// Where one target's files go, overriding "<output>/<target>". This is how a
+// Go bundle reaches the package that embeds it, since go:embed cannot leave
+// its own directory.
+outputs: {backend: "../backend/common/messages"}
 
 namespaces: {
 	common: {targets: ["web"]}
@@ -133,22 +144,36 @@ roots: ["../S99AB/i18n/locales", "locales"]
 ## Output
 
 ```
-generated/
-├── backend/{en,pl}.json      flat, {{.Name}}, go-i18n
-├── web/{en,pl}/*.json        nested, {name}, one file per namespace
-├── web/plurals.gen.ts        the index function
-├── web/keys.gen.ts           the locale list
-├── go/{messages,keys}_gen.go typed accessors
-└── manifest.json
+generated/backend/messages_gen.go      typed accessors
+generated/backend/keys_gen.go          Key* consts, DefaultLocale, Locales
+generated/backend/locales/{en,pl}.json flat, {{.Name}}, go-i18n
+generated/backend/loc-manifest.json    the build record
+generated/web/{en,pl}/*.json           nested, {name}, one file per namespace
+generated/web/plurals.gen.ts           the index function
+generated/web/keys.gen.ts              the locale list and the default locale
+generated/web/loc-manifest.json        the build record
 ```
+
+One directory per target, with the same shape inside it whether it sits under
+`output` or is redirected by `outputs`. The config above puts the backend tree
+in `../backend/common/messages` instead, and the four backend files land there.
 
 Deterministic: sorted keys, no timestamps, atomic writes, unchanged files left
 alone. Two builds on the same input produce identical bytes, and the generated
 Go is already gofmt-canonical so a repo-wide `gofmt -w .` cannot make it stale.
 
-Generated output is disposable. Gitignore it, and have CI build before it
-checks - `check` counts a missing file as stale, so it cannot stand alone in a
-clean checkout.
+Generated output is committed. `loc check` on its own then catches output that
+was not regenerated, and a fresh clone builds without running `loc` first.
+
+`loc-manifest.json` in each target directory is the build record. It is what
+the next build's removal sweep reads: loc removes exactly the files that record
+names, that this build does not produce, and whose bytes still hash to what the
+record says. A file loc cannot prove it wrote is never removed or overwritten:
+the build refuses before it touches anything, names the file, and asks for it to
+be removed by hand.
+
+`loc clean` cannot remove a tree it has no record of, such as one whose
+`loc-manifest.json` was deleted. Remove that tree by hand.
 
 ## Build order
 
@@ -164,14 +189,11 @@ build: locales
     go build -trimpath -o bin/app .
 
 locales:
-    loc build -c i18n/config.cue
+    go tool loc build -c i18n/config.cue
 
 check-locales:
-    loc check -c i18n/config.cue
+    go tool loc check -c i18n/config.cue
 ```
-
-Committing `generated/` instead flips it: then `loc check` on its own catches
-an output nobody regenerated.
 
 ## Adding a message
 
@@ -190,15 +212,15 @@ an output nobody regenerated.
 ## Diagnostics
 
 ```
-I18N003 placeholder mismatch
-
-  Key:     auth.login.failed
-  en:      {email}
-  pl:      {emailAddress}
-  Source:  i18n/locales/pl/auth/login.yaml:14:5
+[x] failed   placeholder mismatch  code=I18N003
+ Key:     auth.login.failed
+ en:      {email}
+ pl:      {emailAddress}
+ Source:  i18n/locales/pl/auth/login.yaml:14:5
 ```
 
-Errors fail the build. Warnings do not, unless `--strict`.
+Errors fail the build. Warnings do not, unless `--strict`. The glyph and the
+word both carry the state, so the line reads the same with colour stripped.
 
 | code | meaning |
 |---|---|
@@ -207,7 +229,6 @@ Errors fail the build. Warnings do not, unless `--strict`.
 | I18N003 | placeholder mismatch across locales |
 | I18N004 | duplicate fully qualified key |
 | I18N005 | key missing from a locale |
-| I18N006 | unknown target |
 | I18N007 | empty translation |
 | I18N008 | message kind differs across locales |
 | I18N009 | required plural category missing |
@@ -218,17 +239,16 @@ Errors fail the build. Warnings do not, unless `--strict`.
 | I18N014 | placeholder type differs across locales |
 | I18N015 | two placeholders collide as one Go field |
 | I18N016 | a later root overrode an earlier one (warning) |
-| I18N017 | `sharing.isolate` with no reason, under `--strict` |
 | I18N018 | plural argument is not an integer |
-| I18N019 | the `zero` band is declared in some locales but not others |
 
-`lint` reports under its own codes and never fails a build:
+`lint` validates the locales before it looks for anything of its own, so a
+broken source fails it. Its own findings are reported under these codes and
+fail only under `--strict`, and only for `lint keys`:
 
 | code | meaning | command |
 |---|---|---|
 | I18N021 | possible shared message | `lint shared` |
 | I18N030 | referenced but not declared | `lint keys` |
-| I18N031 | deprecated key still referenced | `lint keys` |
 | I18N032 | declared but not referenced | `lint keys` |
 
 ## API errors
@@ -244,16 +264,14 @@ translation key names.
 
 ## Documentation
 
-- [docs/format.md](docs/format.md) - canonical file format
-- [docs/plurals.md](docs/plurals.md) - categories, the zero band, the numbers
-- [docs/cli.md](docs/cli.md) - commands, config reference, build integration
-- [docs/sharing.md](docs/sharing.md) - duplicate detection and confidence
-- [docs/pseudolocale.md](docs/pseudolocale.md) - what it catches and preserves
-- [docs/scanning.md](docs/scanning.md) - finding unused and missing keys
-- [docs/refactoring.md](docs/refactoring.md) - planning a rename
-- [examples/basic](examples/basic) - en + pl, both targets, end to end
+- [docs/format.md](docs/format.md): canonical file format
+- [docs/plurals.md](docs/plurals.md): categories per locale, and the numbers
+- [docs/cli.md](docs/cli.md): commands, config reference, build integration
+- [docs/sharing.md](docs/sharing.md): duplicate detection and confidence
+- [docs/scanning.md](docs/scanning.md): finding unused and missing keys
+- [examples/basic](examples/basic): en + pl, both targets, end to end
 
-## Shared messages and pseudolocalisation
+## Shared messages
 
 ```sh
 loc lint shared      # keys that may be one message
@@ -264,14 +282,6 @@ High confidence needs the whole contract to match in every locale, not just
 the default one: `file.open` and `store.status.open` are both "Open" in English
 and different words in Polish. See [docs/sharing.md](docs/sharing.md).
 
-```cue
-pseudolocale: true
-```
-
-`Sign in` becomes `[Šïğñ ïñ··]` - accented so untranslated text stands out,
-padded so a tight layout overflows, bracketed so truncation is visible, with
-placeholders untouched. See [docs/pseudolocale.md](docs/pseudolocale.md).
-
 ## Watching
 
 ```sh
@@ -281,15 +291,30 @@ loc watch
 Rebuilds on every save, debounced. A validation error prints and the watcher
 keeps going.
 
-## Scanning and refactoring
+## Scanning
 
 ```sh
-loc lint keys                                    # unused, missing, deprecated
-loc refactor-shared a.b c.d --to common.action.x # prints a patch, writes nothing
+loc lint keys   # referenced but not declared, declared but not referenced
 ```
 
-See [docs/scanning.md](docs/scanning.md) and
-[docs/refactoring.md](docs/refactoring.md).
+See [docs/scanning.md](docs/scanning.md).
+
+## loc's own text
+
+loc is localized with itself. `i18n/config.cue` builds its catalogue into
+`internal/catalog`, which the binary embeds, and that output is committed like
+any other. `--lang pl` renders the whole command tree in Polish, including
+cobra's own headings; `LOC_LANG`, `LC_ALL`, `LC_MESSAGES` and `LANG` are
+consulted in that order when the flag is absent.
+
+Two consequences:
+
+- `loc clean -c i18n/config.cue` removes the embedded bundle, so the package
+  stops compiling until the next build. The recovery is
+  `git checkout -- internal/catalog`.
+- A tree whose catalogue is unbuildable can be regenerated with a released
+  binary, because `pkg@version` ignores the current module:
+  `go run github.com/smegg99/s99locale/cmd/loc@v1.0.0 build -c i18n/config.cue`.
 
 ## Licence
 

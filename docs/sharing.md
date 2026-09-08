@@ -11,8 +11,7 @@ Every one of these, or it is downgraded:
 - same text in every locale, not just the default one
 - same placeholders, with the same types
 - same plural argument and categories
-- same targets
-- no `sharing.isolate`
+- the same targets, resolved from each key's namespace
 - at least two keys
 
 All locales are compared. `file.open` and
@@ -24,7 +23,7 @@ Polish. Comparing one locale would report them as duplicates.
 | level | meaning | shown |
 |---|---|---|
 | high | the whole contract matches everywhere | by default |
-| medium | text matches, but descriptions, targets or the placeholder contract differ | `--verbose` |
+| medium | text matches, but descriptions, namespace targets or the placeholder contract differ | `--verbose` |
 | low | only the default locale matches | `--verbose` |
 
 Every downgrade carries a reason, so a medium finding says what to look at.
@@ -52,20 +51,6 @@ No suggestion is offered when:
 When one key in the group already lives in `common`, that key is suggested
 instead of a new one.
 
-## Intentional duplication
-
-```yaml
-dialog:
-  accept:
-    value: "OK"
-    sharing:
-      isolate: true
-      reason: "may diverge from the menu wording in other languages"
-```
-
-Isolated keys are excluded from detection entirely. Under `--strict` the reason
-is required - a suppression nobody explained is one nobody can review.
-
 ## Commands
 
 ```sh
@@ -75,4 +60,6 @@ loc lint duplicates        # exact contracts, whatever they are named
 loc lint shared --json     # machine readable
 ```
 
-Never exits non-zero. These are suggestions, not failures.
+A shared or duplicate finding never fails the command: these are suggestions.
+`lint` still validates the locales first, so a broken source fails it under any
+subcommand, and `--strict` makes a warning fail too.
