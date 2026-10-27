@@ -42,16 +42,20 @@ func Run(cfg *config.Config, res *parse.Result) *Report {
 
 func checkKey(r *Report, cfg *config.Config, set *message.Set, key, base string) {
 	ref, hasRef := set.Get(base, key)
+	found, from := ref, base
+	if !hasRef {
+		found, from = firstHolder(cfg.Locales, set, key)
+	}
 
 	for _, locale := range cfg.Locales {
 		m, ok := set.Get(locale, key)
 		if !ok {
 			src := message.Source{}
-			if hasRef {
-				src = ref.Source
+			if found != nil {
+				src = found.Source
 			}
 			r.errorAt(CodeMissingKey, "missingKey", key, locale, src,
-				map[string]any{"locale": locale, "base": base})
+				map[string]any{"locale": locale, "base": from})
 			continue
 		}
 		checkOne(r, cfg, m)
@@ -60,6 +64,16 @@ func checkKey(r *Report, cfg *config.Config, set *message.Set, key, base string)
 			compare(r, ref, m, base)
 		}
 	}
+}
+
+// firstHolder is the first configured locale that defines key, for a key the default locale lacks.
+func firstHolder(locales []string, set *message.Set, key string) (*message.Message, string) {
+	for _, locale := range locales {
+		if m, ok := set.Get(locale, key); ok {
+			return m, locale
+		}
+	}
+	return nil, ""
 }
 
 // checkOne is everything decidable from a single message.

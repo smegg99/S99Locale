@@ -139,6 +139,21 @@ func TestMissingTranslationIsAnError(t *testing.T) {
 	}
 }
 
+func TestKeyMissingFromTheDefaultNamesALocaleThatHasIt(t *testing.T) {
+	r := project(t, map[string]string{
+		"en/common.yaml": "",
+		"pl/common.yaml": okPl,
+	})
+
+	d := find(t, r, validate.CodeMissingKey)
+	if d.Locale != "en" || d.Args["base"] != "pl" {
+		t.Fatalf("diagnostic = %+v, want missing from en and found in pl", d)
+	}
+	if d.Source.File == "" {
+		t.Fatalf("diagnostic has no source; want the pl definition")
+	}
+}
+
 func TestPlaceholderMismatchAcrossLocales(t *testing.T) {
 	r := project(t, map[string]string{
 		"en/common.yaml": okEn,
