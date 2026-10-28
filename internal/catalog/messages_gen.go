@@ -564,6 +564,11 @@ func DiagPluralOtherMissing(l *i18n.Localizer) string {
 	return plain(l, "diag.pluralOtherMissing")
 }
 
+// DiagTemplateBraces I18N019, raised when a form holds doubled braces; placeholders take single ones
+func DiagTemplateBraces(l *i18n.Localizer) string {
+	return plain(l, "diag.templateBraces")
+}
+
 // DiagUnreadable I18N001, raised when the file cannot be opened; the cause is appended untranslated
 func DiagUnreadable(l *i18n.Localizer) string {
 	return plain(l, "diag.unreadable")

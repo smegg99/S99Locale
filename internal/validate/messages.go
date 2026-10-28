@@ -22,6 +22,7 @@ func Messages() []string {
 		"missingKey",
 		"noPluralRule",
 		"emptyTranslation",
+		"templateBraces",
 		"pluralFormMissing",
 		"pluralCategoryExtra",
 		"pluralOtherMissing",

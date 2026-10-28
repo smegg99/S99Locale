@@ -83,6 +83,7 @@ const (
 	KeyDiagPluralCategoryExtra         = "diag.pluralCategoryExtra"
 	KeyDiagPluralFormMissing           = "diag.pluralFormMissing"
 	KeyDiagPluralOtherMissing          = "diag.pluralOtherMissing"
+	KeyDiagTemplateBraces              = "diag.templateBraces"
 	KeyDiagUnreadable                  = "diag.unreadable"
 	KeyDiagValueAndPlural              = "diag.valueAndPlural"
 	KeyDiagValueNotString              = "diag.valueNotString"

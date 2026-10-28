@@ -100,6 +100,8 @@ func diagText(l *i18n.Localizer, d validate.Diagnostic) string {
 		return catalog.DiagNoPluralRule(l)
 	case "emptyTranslation":
 		return catalog.DiagEmptyTranslation(l)
+	case "templateBraces":
+		return catalog.DiagTemplateBraces(l)
 	case "pluralFormMissing":
 		return catalog.DiagPluralFormMissing(l, catalog.DiagPluralFormMissingParams{
 			Locale: argString(d.Args, "locale"), Category: argString(d.Args, "category")})

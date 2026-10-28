@@ -240,6 +240,7 @@ word both carry the state, so the line reads the same with colour stripped.
 | I18N015 | two placeholders collide as one Go field |
 | I18N016 | a later root overrode an earlier one (warning) |
 | I18N018 | plural argument is not an integer |
+| I18N019 | `{{` or `}}` in the text, which go-i18n reads as a template |
 
 `lint` validates the locales before it looks for anything of its own, so a
 broken source fails it. Its own findings are reported under these codes and

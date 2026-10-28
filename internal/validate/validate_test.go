@@ -289,3 +289,19 @@ func TestSitesBehindConfigAndParseNameTheirMessage(t *testing.T) {
 		t.Errorf("noPluralRule lost plural.For's cause: %+v", d[0])
 	}
 }
+
+// go-i18n parses message text as a Go template, so doubled braces fail at runtime and render the key.
+func TestTemplateBracesAreAnError(t *testing.T) {
+	r := project(t, map[string]string{
+		"en/a.yaml": "x:\n  value: \"Use {{name}} here\"\n",
+		"pl/a.yaml": "x:\n  value: \"Tutaj }}\"\n",
+	})
+
+	d := find(t, r, validate.CodeTemplate)
+	if d.Message != "templateBraces" {
+		t.Fatalf("message = %q", d.Message)
+	}
+	if n := len(slices.DeleteFunc(codes(r), func(c string) bool { return c != validate.CodeTemplate })); n != 2 {
+		t.Fatalf("%d template diagnostics, want one per locale", n)
+	}
+}

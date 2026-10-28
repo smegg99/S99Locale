@@ -35,6 +35,7 @@ const (
 	CodeGoCollision    = "I18N015" // two placeholders collide once PascalCased
 	CodeOverride       = "I18N016" // a later root shadowed an earlier one
 	CodePluralArgType  = "I18N018" // plural argument is not an integer
+	CodeTemplate       = "I18N019" // {{ or }} in the text, which go-i18n reads as a template
 
 	// Printed by lint's formatters, never raised as a Diagnostic, so Messages has no key for them.
 	CodePossibleShared        = "I18N021" // keys that may be one message

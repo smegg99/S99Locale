@@ -91,6 +91,9 @@ func checkOne(r *Report, cfg *config.Config, m *message.Message) {
 		if strings.TrimSpace(text) == "" {
 			r.errorAt(CodeEmpty, "emptyTranslation", m.Key, m.Locale, m.Source, nil)
 		}
+		if strings.Contains(text, "{{") || strings.Contains(text, "}}") {
+			r.errorAt(CodeTemplate, "templateBraces", m.Key, m.Locale, m.Source, nil)
+		}
 	}
 
 	if m.Kind == message.KindPlural {

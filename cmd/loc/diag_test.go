@@ -314,6 +314,8 @@ arg:
     n: {type: integer}
 empty:
   value: "   "
+braces:
+  value: "{{name}}"
 `,
 		"en/b.yaml": `
 bare: "x"
