@@ -83,16 +83,14 @@ func cmdWatch(ctx context.Context, a *app) error {
 			if !ok {
 				return nil
 			}
-			if !relevant(event) {
-				continue
+			info, err := os.Stat(event.Name)
+			watch, again := react(event, err == nil && info.IsDir())
+			if watch {
+				_ = watchTree(watcher, event.Name)
 			}
-			// Watch new directories, or files created in them are missed.
-			if event.Has(fsnotify.Create) {
-				if info, err := os.Stat(event.Name); err == nil && info.IsDir() {
-					_ = watchTree(watcher, event.Name)
-				}
+			if again {
+				timer.Reset(debounce)
 			}
-			timer.Reset(debounce)
 
 		case <-timer.C:
 			rebuild(ctx, a)
@@ -105,6 +103,15 @@ func cmdWatch(ctx context.Context, a *app) error {
 				Error: err.Error()}))
 		}
 	}
+}
+
+// react decides what one event needs: a created directory is watched, since files land in it later, and
+// rebuilds at once in case it arrived full; a source file rebuilds.
+func react(event fsnotify.Event, dir bool) (watch, rebuild bool) {
+	if dir && event.Has(fsnotify.Create) {
+		return true, true
+	}
+	return false, relevant(event)
 }
 
 // relevant filters the events worth rebuilding for. Chmod fires on reads on some systems.

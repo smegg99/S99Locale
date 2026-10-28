@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/smegg99/s99locale/internal/catalog"
 )
 
@@ -77,4 +78,24 @@ func (c cancelOn) Write(p []byte) (int, error) {
 		c.cancel()
 	}
 	return n, err
+}
+
+// A directory created under a root holds no .yaml name itself, but files will land in it.
+func TestANewDirectoryIsWatchedAndRebuilt(t *testing.T) {
+	cases := []struct {
+		event          fsnotify.Event
+		dir            bool
+		watch, rebuild bool
+	}{
+		{fsnotify.Event{Name: "/i18n/locales/de", Op: fsnotify.Create}, true, true, true},
+		{fsnotify.Event{Name: "/i18n/locales/de/app.yaml", Op: fsnotify.Write}, false, false, true},
+		{fsnotify.Event{Name: "/i18n/locales/de/notes.txt", Op: fsnotify.Write}, false, false, false},
+		{fsnotify.Event{Name: "/i18n/locales/en/app.yaml", Op: fsnotify.Chmod}, false, false, false},
+	}
+	for _, c := range cases {
+		watch, rebuild := react(c.event, c.dir)
+		if watch != c.watch || rebuild != c.rebuild {
+			t.Errorf("%v (dir %v) = watch %v, rebuild %v; want %v, %v", c.event, c.dir, watch, rebuild, c.watch, c.rebuild)
+		}
+	}
 }
