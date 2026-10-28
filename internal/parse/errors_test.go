@@ -246,3 +246,11 @@ func TestAnOversizedFileIsReportedNotCryptic(t *testing.T) {
 		t.Fatalf("the raw scanner error leaked into the cause: %q", e.Cause)
 	}
 }
+
+// A misspelled field (descripton) would otherwise vanish, and with it the description or placeholders.
+func TestAnUnknownMessageFieldIsAnError(t *testing.T) {
+	res := parseOne(t, map[string]string{"en/a.yaml": "x:\n  value: \"a\"\n  descripton: \"typo\"\n"})
+	if len(res.Errors) != 1 || res.Errors[0].Message != "unknownField" || res.Errors[0].Args["field"] != "descripton" {
+		t.Fatalf("errors = %v, want one unknownField naming descripton", res.Errors)
+	}
+}

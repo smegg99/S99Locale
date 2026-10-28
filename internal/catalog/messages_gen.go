@@ -569,6 +569,19 @@ func DiagTemplateBraces(l *i18n.Localizer) string {
 	return plain(l, "diag.templateBraces")
 }
 
+// DiagUnknownFieldParams are the placeholders of diag.unknownField.
+type DiagUnknownFieldParams struct {
+	Field string
+}
+
+// DiagUnknownField I18N002, raised for a field a message does not have, usually a typo
+func DiagUnknownField(l *i18n.Localizer, p DiagUnknownFieldParams) string {
+	data := map[string]any{
+		"Field": p.Field,
+	}
+	return withData(l, "diag.unknownField", data)
+}
+
 // DiagUnreadable I18N001, raised when the file cannot be opened; the cause is appended untranslated
 func DiagUnreadable(l *i18n.Localizer) string {
 	return plain(l, "diag.unreadable")

@@ -38,6 +38,11 @@ descriptionNotString:
 badPlaceholders:
   value: "the `placeholders` block is not usable"
   description: "I18N002, raised when the placeholders block does not parse; the cause is appended untranslated"
+unknownField:
+  value: "`{field}` is not a message field; use value, plural, description or placeholders"
+  description: "I18N002, raised for a field a message does not have, usually a typo"
+  placeholders:
+    field: {type: string}
 
 override:
   value: "a later root overrides an earlier definition"

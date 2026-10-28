@@ -8,6 +8,9 @@ import (
 	"github.com/smegg99/s99locale/internal/message"
 )
 
+// messageFields are the fields a message node may hold; anything else is most likely a typo.
+var messageFields = map[string]struct{}{"value": {}, "plural": {}, "description": {}, "placeholders": {}}
+
 // buildMessage turns one YAML node into a Message; path locates the node's line in its file.
 func buildMessage(node map[string]any, key, path, locale, file string, lines lineFinder) (*message.Message, *Error) {
 	src := lines.of(path, file)
@@ -26,6 +29,14 @@ func buildMessage(node map[string]any, key, path, locale, file string, lines lin
 			e.Cause = cause.Error()
 		}
 		return e
+	}
+
+	for field := range node {
+		if _, known := messageFields[field]; !known {
+			e := fail(CodeSchema, "unknownField", nil)
+			e.Args = map[string]any{"field": field}
+			return nil, e
+		}
 	}
 
 	if raw, ok := node["value"]; ok {

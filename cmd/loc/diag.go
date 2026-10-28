@@ -91,6 +91,8 @@ func diagText(l *i18n.Localizer, d validate.Diagnostic) string {
 		return catalog.DiagDescriptionNotString(l)
 	case "badPlaceholders":
 		return catalog.DiagBadPlaceholders(l)
+	case "unknownField":
+		return catalog.DiagUnknownField(l, catalog.DiagUnknownFieldParams{Field: argString(d.Args, "field")})
 	case "override":
 		return catalog.DiagOverride(l)
 	case "missingKey":

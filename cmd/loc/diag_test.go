@@ -334,6 +334,9 @@ desc:
 ph:
   value: "x"
   placeholders: "x"
+typo:
+  value: "x"
+  descripton: "x"
 `,
 		"en/auth.yaml":       "login:\n  title:\n    value: \"from the group\"\n",
 		"en/auth/login.yaml": "title:\n  value: \"from the file\"\n",

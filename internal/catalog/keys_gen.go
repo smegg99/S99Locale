@@ -84,6 +84,7 @@ const (
 	KeyDiagPluralFormMissing           = "diag.pluralFormMissing"
 	KeyDiagPluralOtherMissing          = "diag.pluralOtherMissing"
 	KeyDiagTemplateBraces              = "diag.templateBraces"
+	KeyDiagUnknownField                = "diag.unknownField"
 	KeyDiagUnreadable                  = "diag.unreadable"
 	KeyDiagValueAndPlural              = "diag.valueAndPlural"
 	KeyDiagValueNotString              = "diag.valueNotString"

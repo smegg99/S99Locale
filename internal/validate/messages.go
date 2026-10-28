@@ -17,6 +17,7 @@ func Messages() []string {
 		"badPlural",
 		"descriptionNotString",
 		"badPlaceholders",
+		"unknownField",
 		// validate, one entry per errorAt and warnAt site
 		"override",
 		"missingKey",
