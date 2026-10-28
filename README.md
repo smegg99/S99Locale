@@ -38,7 +38,7 @@ agree, and that each plural has the forms its locale needs.
 In a repository that uses loc, pin it as a tool:
 
 ```sh
-go get -tool github.com/smegg99/s99locale/cmd/loc@v1.0.0
+go get -tool github.com/smegg99/s99locale/cmd/loc@v1.1.0
 go tool loc build -c i18n/config.cue
 ```
 
@@ -47,11 +47,11 @@ There is no PATH install. The version lives in the consuming repository's own
 run in a repository that does not pin it:
 
 ```sh
-go run github.com/smegg99/s99locale/cmd/loc@v1.0.0 build -c i18n/config.cue
+go run github.com/smegg99/s99locale/cmd/loc@v1.1.0 build -c i18n/config.cue
 ```
 
-`loc --version` prints `loc 1.0.0` from a pinned tool directive and
-`loc 1.0.0 (a22e8d3, dirty)` from a working tree.
+`loc --version` prints `loc 1.1.0` from a pinned tool directive and
+`loc 1.1.0 (a22e8d3, dirty)` from a working tree.
 
 `go tool loc` needs a warm module cache or a network. A build host that reads
 committed generated output needs neither.
@@ -325,7 +325,7 @@ Two consequences:
   `git checkout -- internal/catalog`.
 - A tree whose catalogue is unbuildable can be regenerated with a released
   binary, because `pkg@version` ignores the current module:
-  `go run github.com/smegg99/s99locale/cmd/loc@v1.0.0 build -c i18n/config.cue`.
+  `go run github.com/smegg99/s99locale/cmd/loc@v1.1.0 build -c i18n/config.cue`.
 
 ## Licence
 
