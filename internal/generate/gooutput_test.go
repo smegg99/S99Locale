@@ -209,3 +209,21 @@ func TestAForeignGeneratedFileSurvivesABuild(t *testing.T) {
 		t.Fatalf("removed = %v, want nothing", removed)
 	}
 }
+
+// The README promises loc never overwrites a file it did not write, and a first build has no record yet.
+func TestAFirstBuildRefusesToOverwriteAHandWrittenFile(t *testing.T) {
+	_, out, dir := shared(t)
+
+	mine := filepath.Join(dir, "pkg/messages/keys_gen.go")
+	body := "package messages\n\n// Written by hand before loc ever ran here.\n"
+	if err := os.WriteFile(mine, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, _, err := out.Write(); err == nil {
+		t.Fatal("the first build overwrote a file loc never wrote")
+	}
+	if got, _ := os.ReadFile(mine); string(got) != body {
+		t.Fatal("the hand-written file changed")
+	}
+}

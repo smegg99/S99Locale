@@ -237,12 +237,8 @@ type plan struct {
 func (o *Output) plan() (plan, error) {
 	var p plan
 
+	// With no record nothing here is provably loc's: nothing is removed, and every file in the way is foreign.
 	prev, err := o.previous()
-	if err != nil || prev == nil {
-		// With no record nothing here is provably loc's, so nothing is removed.
-		return p, err
-	}
-	realDir, err := resolve(o.Dir)
 	if err != nil {
 		return p, err
 	}
@@ -267,6 +263,14 @@ func (o *Output) plan() (plan, error) {
 		}
 	}
 
+	if prev == nil {
+		sort.Strings(p.foreign)
+		return p, nil
+	}
+	realDir, err := resolve(o.Dir)
+	if err != nil {
+		return p, err
+	}
 	for rel, sum := range prev {
 		if _, ok := want[rel]; ok {
 			continue
