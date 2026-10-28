@@ -25,6 +25,8 @@ func TestEmittedIdentifiersNeverCollide(t *testing.T) {
 		"accessor vs key constant":     {plainMsg("x.y"), plainMsg("key.x.y")},
 		"accessor vs DefaultLocale":    {plainMsg("default.locale")},
 		"accessor vs Locales":          {plainMsg("locales")},
+		"accessor vs NewBundle":        {plainMsg("new.bundle")},
+		"accessor vs LocaleFiles":      {plainMsg("locale.files")},
 		"accessor vs another's Params": {withParam("a"), plainMsg("a.params")},
 	}
 	for name, msgs := range cases {

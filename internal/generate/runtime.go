@@ -33,3 +33,26 @@ func withCount(l *i18n.Localizer, id string, count int, data map[string]any) str
 	return out
 }
 `
+
+// embedSource is emitted into embed_gen.go; the files are generated, so a load failure is a build bug.
+const embedSource = `import (
+	"embed"
+
+	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"golang.org/x/text/language"
+)
+
+//go:embed locales/*.json
+var LocaleFiles embed.FS
+
+// NewBundle loads locales/<locale>.json from LocaleFiles for every locale in Locales, DefaultLocale first.
+func NewBundle() *i18n.Bundle {
+	bundle := i18n.NewBundle(language.Make(DefaultLocale))
+	for _, locale := range Locales {
+		if _, err := bundle.LoadMessageFileFS(LocaleFiles, "locales/"+locale+".json"); err != nil {
+			panic("load embedded locale " + locale + ": " + err.Error())
+		}
+	}
+	return bundle
+}
+`

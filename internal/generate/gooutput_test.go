@@ -141,6 +141,7 @@ func TestGoOutputLandsInTheConsumersPackage(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, rel := range []string{
+		"pkg/messages/embed_gen.go",
 		"pkg/messages/keys_gen.go",
 		"pkg/messages/messages_gen.go",
 		"pkg/messages/loc-manifest.json",

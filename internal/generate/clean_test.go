@@ -25,6 +25,7 @@ func TestCleanRemovesEverythingTheRecordsName(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []string{
+		"../pkg/messages/embed_gen.go",
 		"../pkg/messages/keys_gen.go",
 		"../pkg/messages/loc-manifest.json",
 		"../pkg/messages/locales/en.json",

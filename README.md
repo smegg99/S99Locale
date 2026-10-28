@@ -147,6 +147,7 @@ roots: ["../S99AB/i18n/locales", "locales"]
 ```
 generated/backend/messages_gen.go      typed accessors
 generated/backend/keys_gen.go          Key* consts, DefaultLocale, Locales
+generated/backend/embed_gen.go         LocaleFiles (go:embed) and NewBundle()
 generated/backend/locales/{en,pl}.json flat, {{.Name}}, go-i18n
 generated/backend/loc-manifest.json    the build record
 generated/web/{en,pl}/*.json           nested, {name}, one file per namespace
@@ -157,7 +158,15 @@ generated/web/loc-manifest.json        the build record
 
 One directory per target, with the same shape inside it whether it sits under
 `output` or is redirected by `outputs`. The config above puts the backend tree
-in `../backend/common/messages` instead, and the four backend files land there.
+in `../backend/common/messages` instead, and the backend files land there.
+
+`NewBundle()` returns a go-i18n bundle with every locale loaded, so a package
+needs no loader of its own:
+
+```go
+bundle := messages.NewBundle()
+localizer := i18n.NewLocalizer(bundle, "pl", messages.DefaultLocale)
+```
 
 Deterministic: sorted keys, no timestamps, atomic writes, unchanged files left
 alone. Two builds on the same input produce identical bytes, and the generated

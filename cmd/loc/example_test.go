@@ -75,7 +75,7 @@ func TestExampleBuildsEveryTarget(t *testing.T) {
 	if err := cmdBuild(context.Background(), a); err != nil {
 		t.Fatalf("the committed example does not build: %v", err)
 	}
-	if want := "loc: 10 file(s) generated, 10 changed"; !strings.Contains(out.String(), want) {
+	if want := "loc: 11 file(s) generated, 11 changed"; !strings.Contains(out.String(), want) {
 		t.Fatalf("build said %q, want %q", out.String(), want)
 	}
 
@@ -227,6 +227,61 @@ func TestExampleGeneratedGoCompiles(t *testing.T) {
 		t.Skipf("cannot reach the module proxy:\n%s", out)
 	}
 	t.Fatalf("the generated Go does not compile:\n%s", out)
+}
+
+// The generated NewBundle loads every embedded locale, so each renders its own text.
+func TestExampleBundleRendersEveryLocale(t *testing.T) {
+	if testing.Short() {
+		t.Skip("running the example needs the module cache")
+	}
+	goTool, err := exec.LookPath("go")
+	if err != nil {
+		t.Skip("no go toolchain on PATH")
+	}
+
+	path := exampleConfig(t)
+	a, _, _ := testApp(t, options{configPath: path})
+	if err := cmdBuild(context.Background(), a); err != nil {
+		t.Fatal(err)
+	}
+
+	dir := filepath.Dir(filepath.Dir(path))
+	program := `package main
+
+import (
+	"fmt"
+
+	"github.com/nicksnyder/go-i18n/v2/i18n"
+
+	"example.invalid/basic/messages"
+)
+
+func main() {
+	bundle := messages.NewBundle()
+	for _, locale := range messages.Locales {
+		fmt.Println(locale, messages.EmailsWelcomeSubject(i18n.NewLocalizer(bundle, locale), messages.EmailsWelcomeSubjectParams{Product: "Tuner"}))
+	}
+}
+`
+	if err := os.MkdirAll(filepath.Join(dir, "show"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "show", "main.go"), []byte(program), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(goTool, "run", "./show")
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		if strings.Contains(string(out), "dial tcp") || strings.Contains(string(out), "no such host") {
+			t.Skipf("cannot reach the module proxy:\n%s", out)
+		}
+		t.Fatalf("the example program failed:\n%s", out)
+	}
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(lines) != 2 || lines[0][3:] == lines[1][3:] || !strings.Contains(lines[1], "Tuner") {
+		t.Fatalf("each locale should render its own subject:\n%s", out)
+	}
 }
 
 func readJSON(t *testing.T, path string) map[string]any {

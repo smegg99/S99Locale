@@ -422,6 +422,7 @@ func TestADroppedTargetsTreeIsCleared(t *testing.T) {
 	webOnly := configure(t, both, webAtDefault)
 	next := rebuild(t, webOnly)
 	gone := []string{
+		"generated/backend/embed_gen.go",
 		"generated/backend/keys_gen.go",
 		"generated/backend/loc-manifest.json",
 		"generated/backend/locales/en.json",
@@ -719,6 +720,7 @@ go: {package: "messages"}
 		t.Fatal(err)
 	}
 	gone := []string{
+		"pkg/locales/backend/embed_gen.go",
 		"pkg/locales/backend/keys_gen.go",
 		"pkg/locales/backend/loc-manifest.json",
 		"pkg/locales/backend/locales/en.json",
@@ -732,7 +734,7 @@ go: {package: "messages"}
 	if _, err := os.Stat(filepath.Join(pkg, "locales", "backend")); !os.IsNotExist(err) {
 		t.Fatalf("the old backend directory survived: %v", err)
 	}
-	for _, rel := range []string{"keys_gen.go", "loc-manifest.json", "locales/en.json", "locales/pl.json", "messages_gen.go"} {
+	for _, rel := range []string{"embed_gen.go", "keys_gen.go", "loc-manifest.json", "locales/en.json", "locales/pl.json", "messages_gen.go"} {
 		if _, err := os.Stat(filepath.Join(pkg, rel)); err != nil {
 			t.Errorf("new tree: %v", err)
 		}
@@ -782,7 +784,7 @@ go: {package: "messages"}
 					t.Fatalf("build %d: wrote %d, removed %v, err %v; want nothing", build, written, removed, err)
 				}
 			}
-			for _, rel := range []string{"keys_gen.go", "loc-manifest.json", "locales/en.json", "locales/pl.json", "messages_gen.go"} {
+			for _, rel := range []string{"embed_gen.go", "keys_gen.go", "loc-manifest.json", "locales/en.json", "locales/pl.json", "messages_gen.go"} {
 				if _, err := os.Stat(filepath.Join(pkg, rel)); err != nil {
 					t.Errorf("the backend's own output went: %v", err)
 				}
@@ -800,6 +802,7 @@ func TestTwoOldPathsThatAreOneDirectoryAreClearedOnce(t *testing.T) {
 		gone       []string
 	}{
 		{"the web path links to the backend's", "web", "backend", []string{
+			"generated/web/embed_gen.go",
 			"generated/web/keys_gen.go",
 			"generated/web/loc-manifest.json",
 			"generated/web/locales/en.json",

@@ -40,7 +40,23 @@ func GoCode(out *Output, cfg *config.Config, set *message.Set) error {
 	}
 	out.Add("messages_gen.go", src)
 
-	return keysFile(out, cfg, msgs, names)
+	if err := keysFile(out, cfg, msgs, names); err != nil {
+		return err
+	}
+	return embedFile(out, cfg)
+}
+
+// embedFile embeds the generated locales and loads them into a go-i18n bundle.
+func embedFile(out *Output, cfg *config.Config) error {
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s\n\npackage %s\n\n", message.GeneratedHeader, cfg.Go.Package)
+	b.WriteString(embedSource)
+	src, err := gofmt(b.String())
+	if err != nil {
+		return err
+	}
+	out.Add("embed_gen.go", src)
+	return nil
 }
 
 func keysFile(out *Output, cfg *config.Config, msgs []*message.Message, names map[string]string) error {
@@ -93,7 +109,12 @@ func backendMessages(cfg *config.Config, set *message.Set) []*message.Message {
 }
 
 // fixedNames are the package-level identifiers every catalogue emits, owned by no key.
-var fixedNames = map[string]string{"DefaultLocale": "the DefaultLocale constant", "Locales": "the Locales list"}
+var fixedNames = map[string]string{
+	"DefaultLocale": "the DefaultLocale constant",
+	"Locales":       "the Locales list",
+	"LocaleFiles":   "the embedded LocaleFiles",
+	"NewBundle":     "the NewBundle function",
+}
 
 // funcNames maps keys to exported Go identifiers and rejects any two emitted identifiers that are equal:
 // the accessor, its Key constant, its Params type and the package's fixed names.
