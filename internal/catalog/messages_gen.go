@@ -63,11 +63,12 @@ func CliCompletionShort(l *i18n.Localizer) string {
 	return plain(l, "cli.completionShort")
 }
 
-// CliErrNoArgs Usage error when a subcommand is given a positional argument
+// CliErrNoArgsParams are the placeholders of cli.errNoArgs.
 type CliErrNoArgsParams struct {
 	Command string
 }
 
+// CliErrNoArgs Usage error when a subcommand is given a positional argument
 func CliErrNoArgs(l *i18n.Localizer, p CliErrNoArgsParams) string {
 	data := map[string]any{
 		"Command": p.Command,
@@ -75,11 +76,12 @@ func CliErrNoArgs(l *i18n.Localizer, p CliErrNoArgsParams) string {
 	return withData(l, "cli.errNoArgs", data)
 }
 
-// CliErrUnknownColor Usage error for an unrecognised --color value
+// CliErrUnknownColorParams are the placeholders of cli.errUnknownColor.
 type CliErrUnknownColorParams struct {
 	Value string
 }
 
+// CliErrUnknownColor Usage error for an unrecognised --color value
 func CliErrUnknownColor(l *i18n.Localizer, p CliErrUnknownColorParams) string {
 	data := map[string]any{
 		"Value": p.Value,
@@ -87,12 +89,13 @@ func CliErrUnknownColor(l *i18n.Localizer, p CliErrUnknownColorParams) string {
 	return withData(l, "cli.errUnknownColor", data)
 }
 
-// CliErrUnsupportedLanguage Rejects --lang with a language loc has no catalogue for
+// CliErrUnsupportedLanguageParams are the placeholders of cli.errUnsupportedLanguage.
 type CliErrUnsupportedLanguageParams struct {
 	Lang      string
 	Supported string
 }
 
+// CliErrUnsupportedLanguage Rejects --lang with a language loc has no catalogue for
 func CliErrUnsupportedLanguage(l *i18n.Localizer, p CliErrUnsupportedLanguageParams) string {
 	data := map[string]any{
 		"Lang":      p.Lang,
@@ -111,11 +114,12 @@ func CliFlagConfig(l *i18n.Localizer) string {
 	return plain(l, "cli.flagConfig")
 }
 
-// CliFlagHelp Usage text Cobra generates for every --help flag
+// CliFlagHelpParams are the placeholders of cli.flagHelp.
 type CliFlagHelpParams struct {
 	Command string
 }
 
+// CliFlagHelp Usage text Cobra generates for every --help flag
 func CliFlagHelp(l *i18n.Localizer, p CliFlagHelpParams) string {
 	data := map[string]any{
 		"Command": p.Command,
@@ -203,11 +207,12 @@ func CliHeadingHelpTopics(l *i18n.Localizer) string {
 	return plain(l, "cli.headingHelpTopics")
 }
 
-// CliHeadingMoreInfo Closing line of the help template; [command] is Cobra's literal token, as in the usage line above it
+// CliHeadingMoreInfoParams are the placeholders of cli.headingMoreInfo.
 type CliHeadingMoreInfoParams struct {
 	Command string
 }
 
+// CliHeadingMoreInfo Closing line of the help template; [command] is Cobra's literal token, as in the usage line above it
 func CliHeadingMoreInfo(l *i18n.Localizer, p CliHeadingMoreInfoParams) string {
 	data := map[string]any{
 		"Command": p.Command,
@@ -340,11 +345,12 @@ func DiagDescriptionNotString(l *i18n.Localizer) string {
 	return plain(l, "diag.descriptionNotString")
 }
 
-// DiagDuplicateKey I18N004, raised when one root defines a key twice
+// DiagDuplicateKeyParams are the placeholders of diag.duplicateKey.
 type DiagDuplicateKeyParams struct {
 	At string
 }
 
+// DiagDuplicateKey I18N004, raised when one root defines a key twice
 func DiagDuplicateKey(l *i18n.Localizer, p DiagDuplicateKeyParams) string {
 	data := map[string]any{
 		"At": p.At,
@@ -357,12 +363,13 @@ func DiagEmptyTranslation(l *i18n.Localizer) string {
 	return plain(l, "diag.emptyTranslation")
 }
 
-// DiagFileTooLarge I18N001, raised when a canonical file is past the size limit
+// DiagFileTooLargeParams are the placeholders of diag.fileTooLarge.
 type DiagFileTooLargeParams struct {
 	Limit int
 	Size  int
 }
 
+// DiagFileTooLarge I18N001, raised when a canonical file is past the size limit
 func DiagFileTooLarge(l *i18n.Localizer, p DiagFileTooLargeParams) string {
 	data := map[string]any{
 		"Limit": p.Limit,
@@ -371,13 +378,14 @@ func DiagFileTooLarge(l *i18n.Localizer, p DiagFileTooLargeParams) string {
 	return withData(l, "diag.fileTooLarge", data)
 }
 
-// DiagGoFieldCollision I18N015, raised when two placeholder names differ only in casing
+// DiagGoFieldCollisionParams are the placeholders of diag.goFieldCollision.
 type DiagGoFieldCollisionParams struct {
 	Field  string
 	First  string
 	Second string
 }
 
+// DiagGoFieldCollision I18N015, raised when two placeholder names differ only in casing
 func DiagGoFieldCollision(l *i18n.Localizer, p DiagGoFieldCollisionParams) string {
 	data := map[string]any{
 		"Field":  p.Field,
@@ -427,12 +435,13 @@ func DiagLabelWas(l *i18n.Localizer) string {
 	return plain(l, "diag.labelWas")
 }
 
-// DiagMissingKey I18N005, raised when a locale does not carry a key the default locale has
+// DiagMissingKeyParams are the placeholders of diag.missingKey.
 type DiagMissingKeyParams struct {
 	Base   string
 	Locale string
 }
 
+// DiagMissingKey I18N005, raised when a locale does not carry a key the default locale has
 func DiagMissingKey(l *i18n.Localizer, p DiagMissingKeyParams) string {
 	data := map[string]any{
 		"Base":   p.Base,
@@ -456,11 +465,12 @@ func DiagPlaceholderMismatch(l *i18n.Localizer) string {
 	return plain(l, "diag.placeholderMismatch")
 }
 
-// DiagPlaceholderTypeMismatch I18N014, raised when two locales disagree about a placeholder's type
+// DiagPlaceholderTypeMismatchParams are the placeholders of diag.placeholderTypeMismatch.
 type DiagPlaceholderTypeMismatchParams struct {
 	Name string
 }
 
+// DiagPlaceholderTypeMismatch I18N014, raised when two locales disagree about a placeholder's type
 func DiagPlaceholderTypeMismatch(l *i18n.Localizer, p DiagPlaceholderTypeMismatchParams) string {
 	data := map[string]any{
 		"Name": p.Name,
@@ -468,11 +478,12 @@ func DiagPlaceholderTypeMismatch(l *i18n.Localizer, p DiagPlaceholderTypeMismatc
 	return withData(l, "diag.placeholderTypeMismatch", data)
 }
 
-// DiagPlaceholderUndeclared I18N012, raised when text interpolates something the message does not declare
+// DiagPlaceholderUndeclaredParams are the placeholders of diag.placeholderUndeclared.
 type DiagPlaceholderUndeclaredParams struct {
 	Name string
 }
 
+// DiagPlaceholderUndeclared I18N012, raised when text interpolates something the message does not declare
 func DiagPlaceholderUndeclared(l *i18n.Localizer, p DiagPlaceholderUndeclaredParams) string {
 	data := map[string]any{
 		"Name": p.Name,
@@ -480,11 +491,12 @@ func DiagPlaceholderUndeclared(l *i18n.Localizer, p DiagPlaceholderUndeclaredPar
 	return withData(l, "diag.placeholderUndeclared", data)
 }
 
-// DiagPlaceholderUnused I18N013, a warning raised when a declaration reaches no text
+// DiagPlaceholderUnusedParams are the placeholders of diag.placeholderUnused.
 type DiagPlaceholderUnusedParams struct {
 	Name string
 }
 
+// DiagPlaceholderUnused I18N013, a warning raised when a declaration reaches no text
 func DiagPlaceholderUnused(l *i18n.Localizer, p DiagPlaceholderUnusedParams) string {
 	data := map[string]any{
 		"Name": p.Name,
@@ -502,12 +514,13 @@ func DiagPluralArgumentMissing(l *i18n.Localizer) string {
 	return plain(l, "diag.pluralArgumentMissing")
 }
 
-// DiagPluralArgumentType I18N018, raised when the counted argument is not an integer
+// DiagPluralArgumentTypeParams are the placeholders of diag.pluralArgumentType.
 type DiagPluralArgumentTypeParams struct {
 	Kind string
 	Name string
 }
 
+// DiagPluralArgumentType I18N018, raised when the counted argument is not an integer
 func DiagPluralArgumentType(l *i18n.Localizer, p DiagPluralArgumentTypeParams) string {
 	data := map[string]any{
 		"Kind": p.Kind,
@@ -516,12 +529,13 @@ func DiagPluralArgumentType(l *i18n.Localizer, p DiagPluralArgumentTypeParams) s
 	return withData(l, "diag.pluralArgumentType", data)
 }
 
-// DiagPluralCategoryExtra I18N010, raised per category the locale's rule never selects
+// DiagPluralCategoryExtraParams are the placeholders of diag.pluralCategoryExtra.
 type DiagPluralCategoryExtraParams struct {
 	Category string
 	Locale   string
 }
 
+// DiagPluralCategoryExtra I18N010, raised per category the locale's rule never selects
 func DiagPluralCategoryExtra(l *i18n.Localizer, p DiagPluralCategoryExtraParams) string {
 	data := map[string]any{
 		"Category": p.Category,
@@ -530,12 +544,13 @@ func DiagPluralCategoryExtra(l *i18n.Localizer, p DiagPluralCategoryExtraParams)
 	return withData(l, "diag.pluralCategoryExtra", data)
 }
 
-// DiagPluralFormMissing I18N009, raised per required category the message does not carry
+// DiagPluralFormMissingParams are the placeholders of diag.pluralFormMissing.
 type DiagPluralFormMissingParams struct {
 	Category string
 	Locale   string
 }
 
+// DiagPluralFormMissing I18N009, raised per required category the message does not carry
 func DiagPluralFormMissing(l *i18n.Localizer, p DiagPluralFormMissingParams) string {
 	data := map[string]any{
 		"Category": p.Category,
@@ -564,12 +579,13 @@ func DiagValueNotString(l *i18n.Localizer) string {
 	return plain(l, "diag.valueNotString")
 }
 
-// ReportBuildGenerated Printed after a successful build
+// ReportBuildGeneratedParams are the placeholders of report.buildGenerated.
 type ReportBuildGeneratedParams struct {
 	Changed int
 	Files   int
 }
 
+// ReportBuildGenerated Printed after a successful build
 func ReportBuildGenerated(l *i18n.Localizer, p ReportBuildGeneratedParams) string {
 	data := map[string]any{
 		"Changed": p.Changed,
@@ -578,11 +594,12 @@ func ReportBuildGenerated(l *i18n.Localizer, p ReportBuildGeneratedParams) strin
 	return withData(l, "report.buildGenerated", data)
 }
 
-// ReportBuildRemoved One line per file the build removed, named so nobody has to bisect for it
+// ReportBuildRemovedParams are the placeholders of report.buildRemoved.
 type ReportBuildRemovedParams struct {
 	Path string
 }
 
+// ReportBuildRemoved One line per file the build removed, named so nobody has to bisect for it
 func ReportBuildRemoved(l *i18n.Localizer, p ReportBuildRemovedParams) string {
 	data := map[string]any{
 		"Path": p.Path,
@@ -595,11 +612,12 @@ func ReportBuildWorking(l *i18n.Localizer) string {
 	return plain(l, "report.buildWorking")
 }
 
-// ReportCheckCurrent Printed when check finds nothing stale
+// ReportCheckCurrentParams are the placeholders of report.checkCurrent.
 type ReportCheckCurrentParams struct {
 	Files int
 }
 
+// ReportCheckCurrent Printed when check finds nothing stale
 func ReportCheckCurrent(l *i18n.Localizer, p ReportCheckCurrentParams) string {
 	data := map[string]any{
 		"Files": p.Files,
@@ -627,11 +645,12 @@ func ReportCleanNothing(l *i18n.Localizer) string {
 	return plain(l, "report.cleanNothing")
 }
 
-// ReportCleanRemoved One line per file clean removed
+// ReportCleanRemovedParams are the placeholders of report.cleanRemoved.
 type ReportCleanRemovedParams struct {
 	Path string
 }
 
+// ReportCleanRemoved One line per file clean removed
 func ReportCleanRemoved(l *i18n.Localizer, p ReportCleanRemovedParams) string {
 	data := map[string]any{
 		"Path": p.Path,
@@ -639,12 +658,13 @@ func ReportCleanRemoved(l *i18n.Localizer, p ReportCleanRemovedParams) string {
 	return withData(l, "report.cleanRemoved", data)
 }
 
-// ReportErrorsAndWarnings The count under a run's diagnostics
+// ReportErrorsAndWarningsParams are the placeholders of report.errorsAndWarnings.
 type ReportErrorsAndWarningsParams struct {
 	Errors   int
 	Warnings int
 }
 
+// ReportErrorsAndWarnings The count under a run's diagnostics
 func ReportErrorsAndWarnings(l *i18n.Localizer, p ReportErrorsAndWarningsParams) string {
 	data := map[string]any{
 		"Errors":   p.Errors,
@@ -653,11 +673,12 @@ func ReportErrorsAndWarnings(l *i18n.Localizer, p ReportErrorsAndWarningsParams)
 	return withData(l, "report.errorsAndWarnings", data)
 }
 
-// ReportLintCandidates The count under lint shared's findings
+// ReportLintCandidatesParams are the placeholders of report.lintCandidates.
 type ReportLintCandidatesParams struct {
 	Count int
 }
 
+// ReportLintCandidates The count under lint shared's findings
 func ReportLintCandidates(l *i18n.Localizer, p ReportLintCandidatesParams) string {
 	data := map[string]any{
 		"Count": p.Count,
@@ -715,11 +736,12 @@ func ReportLintDeclaredNotReferenced(l *i18n.Localizer) string {
 	return plain(l, "report.lintDeclaredNotReferenced")
 }
 
-// ReportLintDuplicates The count under lint duplicates' findings
+// ReportLintDuplicatesParams are the placeholders of report.lintDuplicates.
 type ReportLintDuplicatesParams struct {
 	Count int
 }
 
+// ReportLintDuplicates The count under lint duplicates' findings
 func ReportLintDuplicates(l *i18n.Localizer, p ReportLintDuplicatesParams) string {
 	data := map[string]any{
 		"Count": p.Count,
@@ -732,11 +754,12 @@ func ReportLintDynamicHint(l *i18n.Localizer) string {
 	return plain(l, "report.lintDynamicHint")
 }
 
-// ReportLintHidden Printed by lint shared when it filtered something out, whether or not it showed a candidate
+// ReportLintHiddenParams are the placeholders of report.lintHidden.
 type ReportLintHiddenParams struct {
 	Count int
 }
 
+// ReportLintHidden Printed by lint shared when it filtered something out, whether or not it showed a candidate
 func ReportLintHidden(l *i18n.Localizer, p ReportLintHiddenParams) string {
 	data := map[string]any{
 		"Count": p.Count,
@@ -774,11 +797,12 @@ func ReportLintReasonContract(l *i18n.Localizer) string {
 	return plain(l, "report.lintReasonContract")
 }
 
-// ReportLintReasonDefaultOnly Shown under the confidence of a low lint shared finding whose text matches in the default locale only; locale is the default locale's code; --json keeps a stable code
+// ReportLintReasonDefaultOnlyParams are the placeholders of report.lintReasonDefaultOnly.
 type ReportLintReasonDefaultOnlyParams struct {
 	Locale string
 }
 
+// ReportLintReasonDefaultOnly Shown under the confidence of a low lint shared finding whose text matches in the default locale only; locale is the default locale's code; --json keeps a stable code
 func ReportLintReasonDefaultOnly(l *i18n.Localizer, p ReportLintReasonDefaultOnlyParams) string {
 	data := map[string]any{
 		"Locale": p.Locale,
@@ -806,12 +830,13 @@ func ReportLintReferencedNotDeclared(l *i18n.Localizer) string {
 	return plain(l, "report.lintReferencedNotDeclared")
 }
 
-// ReportLintScanned Printed by lint keys before its findings
+// ReportLintScannedParams are the placeholders of report.lintScanned.
 type ReportLintScannedParams struct {
 	Files int
 	Roots int
 }
 
+// ReportLintScanned Printed by lint keys before its findings
 func ReportLintScanned(l *i18n.Localizer, p ReportLintScannedParams) string {
 	data := map[string]any{
 		"Files": p.Files,
@@ -885,11 +910,12 @@ func ReportWaitingForLock(l *i18n.Localizer) string {
 	return plain(l, "report.waitingForLock")
 }
 
-// ReportWatchError Printed when the file watcher itself reports a problem; the error is untranslated
+// ReportWatchErrorParams are the placeholders of report.watchError.
 type ReportWatchErrorParams struct {
 	Error string
 }
 
+// ReportWatchError Printed when the file watcher itself reports a problem; the error is untranslated
 func ReportWatchError(l *i18n.Localizer, p ReportWatchErrorParams) string {
 	data := map[string]any{
 		"Error": p.Error,
@@ -912,11 +938,12 @@ func ReportWatchStopped(l *i18n.Localizer) string {
 	return plain(l, "report.watchStopped")
 }
 
-// ReportWatchWatching Printed once when watch starts
+// ReportWatchWatchingParams are the placeholders of report.watchWatching.
 type ReportWatchWatchingParams struct {
 	Roots int
 }
 
+// ReportWatchWatching Printed once when watch starts
 func ReportWatchWatching(l *i18n.Localizer, p ReportWatchWatchingParams) string {
 	data := map[string]any{
 		"Roots": p.Roots,

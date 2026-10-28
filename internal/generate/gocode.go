@@ -92,17 +92,37 @@ func backendMessages(cfg *config.Config, set *message.Set) []*message.Message {
 	return out
 }
 
-// funcNames maps keys to exported Go identifiers and rejects two keys with one identifier.
+// fixedNames are the package-level identifiers every catalogue emits, owned by no key.
+var fixedNames = map[string]string{"DefaultLocale": "the DefaultLocale constant", "Locales": "the Locales list"}
+
+// funcNames maps keys to exported Go identifiers and rejects any two emitted identifiers that are equal:
+// the accessor, its Key constant, its Params type and the package's fixed names.
 func funcNames(msgs []*message.Message) (map[string]string, error) {
 	out := map[string]string{}
-	seen := map[string]string{}
+	owner := map[string]string{}
+	for name, what := range fixedNames {
+		owner[name] = what
+	}
+	claim := func(ident, by string) error {
+		if other, dup := owner[ident]; dup {
+			return fmt.Errorf("generate: %s and %s both generate %s", other, by, ident)
+		}
+		owner[ident] = by
+		return nil
+	}
 
 	for _, m := range msgs {
 		name := exported(m.Key)
-		if other, dup := seen[name]; dup {
-			return nil, fmt.Errorf("generate: %q and %q both generate %s", other, m.Key, name)
+		by := fmt.Sprintf("%q", m.Key)
+		idents := []string{name, "Key" + name}
+		if len(m.Placeholders) > 0 {
+			idents = append(idents, name+"Params")
 		}
-		seen[name] = m.Key
+		for _, ident := range idents {
+			if err := claim(ident, by); err != nil {
+				return nil, err
+			}
+		}
 		out[m.Key] = name
 	}
 	return out, nil
@@ -122,24 +142,27 @@ func accessor(m *message.Message, name string) string {
 
 	params := message.SortedPlaceholders(m.Placeholders)
 
-	if m.Description != "" {
-		fmt.Fprintf(&b, "\n// %s %s\n", name, m.Description)
-	} else {
-		fmt.Fprintf(&b, "\n// %s renders %s.\n", name, m.Key)
+	// One line: a description is free text, and a line break in it would end the comment.
+	doc := fmt.Sprintf("// %s renders %s.\n", name, m.Key)
+	if text := strings.Join(strings.Fields(m.Description), " "); text != "" {
+		doc = fmt.Sprintf("// %s %s\n", name, text)
 	}
 
 	if len(params) == 0 {
+		b.WriteString("\n" + doc)
 		fmt.Fprintf(&b, "func %s(l *i18n.Localizer) string {\n", name)
 		fmt.Fprintf(&b, "\treturn plain(l, %q)\n}\n", m.Key)
 		return b.String()
 	}
 
+	fmt.Fprintf(&b, "\n// %sParams are the placeholders of %s.\n", name, m.Key)
 	fmt.Fprintf(&b, "type %sParams struct {\n", name)
 	for _, p := range params {
 		fmt.Fprintf(&b, "\t%s %s\n", validate.GoField(p.Name), goType(p.Type))
 	}
 	b.WriteString("}\n\n")
 
+	b.WriteString(doc)
 	fmt.Fprintf(&b, "func %s(l *i18n.Localizer, p %sParams) string {\n", name, name)
 	b.WriteString("\tdata := map[string]any{\n")
 	for _, p := range params {

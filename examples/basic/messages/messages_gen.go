@@ -33,11 +33,12 @@ func withCount(l *i18n.Localizer, id string, count int, data map[string]any) str
 	return out
 }
 
-// EmailsDigestSubject Digest subject line. Counted, and rendered by Go.
+// EmailsDigestSubjectParams are the placeholders of emails.digest.subject.
 type EmailsDigestSubjectParams struct {
 	Count int
 }
 
+// EmailsDigestSubject Digest subject line. Counted, and rendered by Go.
 func EmailsDigestSubject(l *i18n.Localizer, p EmailsDigestSubjectParams) string {
 	data := map[string]any{
 		"Count": p.Count,
@@ -45,11 +46,12 @@ func EmailsDigestSubject(l *i18n.Localizer, p EmailsDigestSubjectParams) string 
 	return withCount(l, "emails.digest.subject", p.Count, data)
 }
 
-// EmailsWelcomeBody renders emails.welcome.body.
+// EmailsWelcomeBodyParams are the placeholders of emails.welcome.body.
 type EmailsWelcomeBodyParams struct {
 	Name string
 }
 
+// EmailsWelcomeBody renders emails.welcome.body.
 func EmailsWelcomeBody(l *i18n.Localizer, p EmailsWelcomeBodyParams) string {
 	data := map[string]any{
 		"Name": p.Name,
@@ -57,11 +59,12 @@ func EmailsWelcomeBody(l *i18n.Localizer, p EmailsWelcomeBodyParams) string {
 	return withData(l, "emails.welcome.body", data)
 }
 
-// EmailsWelcomeSubject renders emails.welcome.subject.
+// EmailsWelcomeSubjectParams are the placeholders of emails.welcome.subject.
 type EmailsWelcomeSubjectParams struct {
 	Product string
 }
 
+// EmailsWelcomeSubject renders emails.welcome.subject.
 func EmailsWelcomeSubject(l *i18n.Localizer, p EmailsWelcomeSubjectParams) string {
 	data := map[string]any{
 		"Product": p.Product,
