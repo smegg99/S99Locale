@@ -128,7 +128,8 @@ namespaces: {
 go: {package: "messages"}
 ```
 
-A namespace with no entry reaches every target.
+A namespace with no entry reaches every target, or the ones `defaultTargets` names (for
+example `defaultTargets: ["web"]` when most namespaces are frontend-only).
 
 ## Layered roots
 

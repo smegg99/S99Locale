@@ -19,8 +19,11 @@ package config
 	// ".." is allowed so a Go bundle can reach the package that embeds it.
 	outputs: [#Target]: string
 
-	// Namespace ownership. A namespace with no entry reaches every target.
+	// Namespace ownership. A namespace with no entry, or no targets, reaches defaultTargets.
 	namespaces: [string]: #Namespace
+
+	// What a namespace without its own targets reaches. Empty means every target.
+	defaultTargets: [...#Target]
 
 	// Keys built at runtime, kept out of the unused report.
 	// A trailing dot covers everything beneath it: "status." covers status.pending.

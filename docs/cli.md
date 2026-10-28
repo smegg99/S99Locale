@@ -130,7 +130,8 @@ directory may hold a canonical root or a scan directory, a redirected target
 may not sit inside the `output` tree, and `output` itself must resolve below
 the config's own directory. Each is refused at load.
 
-A namespace with no entry reaches every target.
+A namespace with no entry reaches every target, or the ones `defaultTargets` names (for
+example `defaultTargets: ["web"]` when most namespaces are frontend-only).
 
 ## Layered roots
 

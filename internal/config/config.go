@@ -32,17 +32,18 @@ type Go struct {
 }
 
 type Config struct {
-	DefaultLocale string                    `json:"defaultLocale"`
-	Locales       []string                  `json:"locales"`
-	Targets       []message.Target          `json:"targets"`
-	Roots         []string                  `json:"roots"`
-	Output        string                    `json:"output"`
-	Outputs       map[message.Target]string `json:"outputs"`
-	Namespaces    map[string]Namespace      `json:"namespaces"`
-	DynamicKeys   []string                  `json:"dynamicKeys"`
-	Scan          []string                  `json:"scan"`
-	KeyPatterns   []string                  `json:"keyPatterns"`
-	Go            Go                        `json:"go"`
+	DefaultLocale  string                    `json:"defaultLocale"`
+	Locales        []string                  `json:"locales"`
+	Targets        []message.Target          `json:"targets"`
+	Roots          []string                  `json:"roots"`
+	Output         string                    `json:"output"`
+	Outputs        map[message.Target]string `json:"outputs"`
+	Namespaces     map[string]Namespace      `json:"namespaces"`
+	DefaultTargets []message.Target          `json:"defaultTargets"`
+	DynamicKeys    []string                  `json:"dynamicKeys"`
+	Scan           []string                  `json:"scan"`
+	KeyPatterns    []string                  `json:"keyPatterns"`
+	Go             Go                        `json:"go"`
 
 	// Dir is the config's directory; every relative path resolves against it.
 	Dir string `json:"-"`
@@ -104,6 +105,11 @@ func (c *Config) check() error {
 		seen[locale] = struct{}{}
 	}
 
+	for _, t := range c.DefaultTargets {
+		if !slices.Contains(c.Targets, t) {
+			return fmt.Errorf("defaultTargets names %q, which is not in targets %v", t, c.Targets)
+		}
+	}
 	for name, ns := range c.Namespaces {
 		for _, t := range ns.Targets {
 			if !slices.Contains(c.Targets, t) {
@@ -259,7 +265,11 @@ func (c *Config) abs(p string) string {
 func (c *Config) TargetsFor(namespace string) []message.Target {
 	ns, ok := c.Namespaces[namespace]
 	if !ok || len(ns.Targets) == 0 {
-		return slices.Clone(c.Targets)
+		if len(c.DefaultTargets) > 0 {
+			ns.Targets = c.DefaultTargets
+		} else {
+			return slices.Clone(c.Targets)
+		}
 	}
 
 	out := make([]message.Target, 0, len(ns.Targets))

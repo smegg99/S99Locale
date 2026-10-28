@@ -333,3 +333,25 @@ func TestARedirectedTargetMayNotSitInsideTheOutputTree(t *testing.T) {
 		t.Fatalf("err = %q", got)
 	}
 }
+
+// An app whose namespaces are mostly web-only names that once, not on each of them.
+func TestDefaultTargetsApplyToNamespacesWithoutTheirOwn(t *testing.T) {
+	cfg := load(t, valid+"defaultTargets: [\"web\"]\n")
+	if got := cfg.TargetsFor("settings"); !slices.Equal(got, []message.Target{"web"}) {
+		t.Fatalf("an unlisted namespace reaches %v, want [web]", got)
+	}
+	if got := cfg.TargetsFor("emails"); !slices.Equal(got, []message.Target{"backend"}) {
+		t.Fatalf("a namespace's own targets lost to the default: %v", got)
+	}
+	if got := load(t, valid).TargetsFor("settings"); len(got) != 2 {
+		t.Fatalf("without defaultTargets an unlisted namespace reaches %v, want every target", got)
+	}
+}
+
+func TestDefaultTargetsMustBeBuilt(t *testing.T) {
+	body := strings.Replace(valid, `targets: ["web", "backend"]`, `targets: ["web"]`, 1)
+	body = strings.Replace(body, "emails: {targets: [\"backend\"]}", "", 1)
+	if got := loadErr(t, body+"defaultTargets: [\"backend\"]\n"); !strings.Contains(got, "backend") {
+		t.Fatalf("error = %s", got)
+	}
+}
