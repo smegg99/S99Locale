@@ -192,28 +192,3 @@ func TestMatchRegion(t *testing.T) {
 		}
 	}
 }
-
-func TestNormalize(t *testing.T) {
-	for _, c := range []struct {
-		in  string
-		tag string
-		isC bool
-	}{
-		{"pl_PL.UTF-8", "pl", false},
-		{"pl@euro", "pl", false},
-		{"pl-PL", "pl", false},
-		{"PL", "pl", false},
-		{"  pl  ", "pl", false},
-		{"C", "", true},
-		{"c", "", true},
-		{"POSIX", "", true},
-		{"C.UTF-8", "", true},
-		{"C.utf8", "", true},
-		{"", "", false},
-	} {
-		tag, isC := lang.Normalize(c.in)
-		if tag != c.tag || isC != c.isC {
-			t.Errorf("Normalize(%q) = (%q, %v), want (%q, %v)", c.in, tag, isC, c.tag, c.isC)
-		}
-	}
-}

@@ -78,13 +78,6 @@ func Match(supported []string, value string) (canonical string, ok bool) {
 	return canonical, best > 0
 }
 
-// Normalize reduces a POSIX locale or BCP 47 tag to its lowercase language subtag;
-// isC reports C, C.UTF-8 and POSIX, which name no language.
-func Normalize(value string) (tag string, isC bool) {
-	tag, _, isC = split(value)
-	return tag, isC
-}
-
 // split lowercases a locale into language and region, dropping .encoding and @modifier.
 func split(value string) (language, region string, isC bool) {
 	tag := strings.TrimSpace(value)
