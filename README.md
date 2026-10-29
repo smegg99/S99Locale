@@ -66,6 +66,11 @@ loginFailed:
     email: {type: string}
 ```
 
+A placeholder takes single braces; loc writes the go-i18n `{{.Email}}` template
+itself. Since 1.1.0 a source holding raw `{{.X}}` text is refused (I18N019):
+rewrite it as `{x}` with a `placeholders` entry, whose generated Go field is
+PascalCase.
+
 Plurals name their counted argument, because real sources use both `count` and
 `n`:
 
@@ -250,7 +255,7 @@ word both carry the state, so the line reads the same with colour stripped.
 | I18N015 | two placeholders collide as one Go field |
 | I18N016 | a later root overrode an earlier one (warning) |
 | I18N018 | plural argument is not an integer |
-| I18N019 | `{{` or `}}` in the text, which go-i18n reads as a template |
+| I18N019 | `{{` or `}}` in the text; write `{name}` and declare it, loc emits the go-i18n template |
 
 `lint` validates the locales before it looks for anything of its own, so a
 broken source fails it. Its own findings are reported under these codes and

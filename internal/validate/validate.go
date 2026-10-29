@@ -32,15 +32,22 @@ func Run(cfg *config.Config, res *parse.Result) *Report {
 		})
 	}
 
+	// A message dropped for a parse error is reported once, not also as missing.
+	broken := map[string]bool{}
+	for _, e := range res.Errors {
+		if e.Key != "" {
+			broken[e.Key] = true
+		}
+	}
 	base := cfg.DefaultLocale
 	for _, key := range res.Set.Keys() {
-		checkKey(r, cfg, res.Set, key, base)
+		checkKey(r, cfg, res.Set, key, base, broken[key])
 	}
 	r.Sort()
 	return r
 }
 
-func checkKey(r *Report, cfg *config.Config, set *message.Set, key, base string) {
+func checkKey(r *Report, cfg *config.Config, set *message.Set, key, base string, broken bool) {
 	ref, hasRef := set.Get(base, key)
 	found, from := ref, base
 	if !hasRef {
@@ -49,6 +56,9 @@ func checkKey(r *Report, cfg *config.Config, set *message.Set, key, base string)
 
 	for _, locale := range cfg.Locales {
 		m, ok := set.Get(locale, key)
+		if !ok && broken {
+			continue
+		}
 		if !ok {
 			src := message.Source{}
 			if found != nil {

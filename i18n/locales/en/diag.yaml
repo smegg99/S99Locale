@@ -60,7 +60,7 @@ emptyTranslation:
   value: "empty translation; delete the key or translate it"
   description: "I18N007, raised when a form is blank"
 templateBraces:
-  value: "doubled braces in the text; go-i18n reads them as a template and shows the key instead"
+  value: "doubled braces in the text; write the placeholder in single braces, declare it, and loc emits the go-i18n template"
   description: "I18N019, raised when a form holds doubled braces; placeholders take single ones"
 pluralFormMissing:
   value: "{locale} needs a {category} form; without it that band silently renders another case"

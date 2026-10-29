@@ -304,3 +304,17 @@ func TestTemplateBracesAreAnError(t *testing.T) {
 		t.Fatalf("%d template diagnostics, want one per locale", n)
 	}
 }
+
+// A message dropped for a parse error is not also reported missing from its locale.
+func TestAParseErrorIsNotAlsoAMissingKey(t *testing.T) {
+	r := project(t, map[string]string{
+		"en/common.yaml": "greeting:\n  value: \"Hello\"\n  description: \"d\"\n  colour: \"red\"\n",
+		"pl/common.yaml": "greeting:\n  value: \"Witaj\"\n  description: \"d\"\n",
+	})
+	if has(r, validate.CodeMissingKey) {
+		t.Fatalf("diagnostics = %v, want the parse error alone", codes(r))
+	}
+	if len(r.Diagnostics) == 0 {
+		t.Fatal("the unknown field was not reported")
+	}
+}

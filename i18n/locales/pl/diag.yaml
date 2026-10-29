@@ -44,7 +44,7 @@ noPluralRule:
 emptyTranslation:
   value: "puste tłumaczenie; usuń klucz lub go przetłumacz"
 templateBraces:
-  value: "podwójne nawiasy klamrowe w tekście; go-i18n czyta je jako szablon i pokazuje klucz"
+  value: "podwójne nawiasy klamrowe w tekście; zapisz placeholder w pojedynczych nawiasach, zadeklaruj go, a loc sam wygeneruje szablon go-i18n"
 pluralFormMissing:
   value: "{locale} potrzebuje formy {category}; bez niej liczby z tej kategorii po cichu dostają inną formę"
   placeholders:
