@@ -105,8 +105,7 @@ func cmdWatch(ctx context.Context, a *app) error {
 	}
 }
 
-// react decides what one event needs: a created directory is watched, since files land in it later, and
-// rebuilds at once in case it arrived full; a source file rebuilds.
+// react watches a created directory and rebuilds in case it arrived full; a source file rebuilds.
 func react(event fsnotify.Event, dir bool) (watch, rebuild bool) {
 	if dir && event.Has(fsnotify.Create) {
 		return true, true

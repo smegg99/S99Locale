@@ -116,8 +116,7 @@ var fixedNames = map[string]string{
 	"NewBundle":     "the NewBundle function",
 }
 
-// funcNames maps keys to exported Go identifiers and rejects any two emitted identifiers that are equal:
-// the accessor, its Key constant, its Params type and the package's fixed names.
+// funcNames maps keys to Go names and refuses any two emitted identifiers that are equal.
 func funcNames(msgs []*message.Message) (map[string]string, error) {
 	out := map[string]string{}
 	owner := map[string]string{}

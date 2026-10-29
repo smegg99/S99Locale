@@ -12,8 +12,7 @@ import (
 	"time"
 )
 
-// flock is per open file description, not per process, so two AcquireAll calls
-// in one test conflict exactly as two processes would.
+// flock is per open file description, so two AcquireAll calls in one test conflict like two processes.
 func skipWithoutFlock(t *testing.T) {
 	t.Helper()
 	if runtime.GOOS == "windows" || runtime.GOOS == "js" || runtime.GOOS == "plan9" {
@@ -189,8 +188,7 @@ func TestAWaitIsAnnouncedOncePerSet(t *testing.T) {
 	}
 }
 
-// Two runs whose directory sets overlap partially would deadlock if each took
-// them in its own order.
+// Partly overlapping directory sets must not deadlock.
 func TestOverlappingSetsDoNotDeadlock(t *testing.T) {
 	skipWithoutFlock(t)
 	one, two := t.TempDir(), t.TempDir()
@@ -232,8 +230,7 @@ func TestReleaseOnTheZeroValueIsSafe(t *testing.T) {
 	(&Lock{}).release()
 }
 
-// Two configs writing to one output must serialise; two writing to different
-// outputs must not.
+// Two configs writing one output serialise; two writing different outputs do not.
 func TestTheLockIsKeyedOnTheOutputDirectory(t *testing.T) {
 	a, b := t.TempDir(), t.TempDir()
 

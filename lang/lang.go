@@ -50,8 +50,7 @@ func Detect(opts Options) string {
 	return opts.Default
 }
 
-// Match returns the Supported entry a locale selects: the same language and region,
-// else the bare language, else the first with that language.
+// Match returns the supported locale value selects: same language and region, else the bare language, else the first match.
 func Match(supported []string, value string) (canonical string, ok bool) {
 	language, region, isC := split(value)
 	if isC || language == "" {

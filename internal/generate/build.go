@@ -228,8 +228,7 @@ func addManifest(out *Output, cfg *config.Config, set *message.Set) error {
 	return out.AddJSON(ManifestName, man)
 }
 
-// sourceHash fingerprints the inputs, so `check` can tell a stale build from a
-// config change without re-reading every source file.
+// sourceHash fingerprints the inputs, so check tells a stale build from a config change cheaply.
 func sourceHash(cfg *config.Config, set *message.Set) string {
 	h := sha256.New()
 

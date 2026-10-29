@@ -12,8 +12,7 @@ import (
 // Default is where loc looks when no path is given.
 const Default = "i18n/config.cue"
 
-// loadFile compiles a config file on its own, before unification, so a syntax
-// error names the user's file rather than the embedded schema.
+// loadFile compiles the file alone first, so a syntax error names the user's file, not the schema.
 func loadFile(cueCtx *cue.Context, path string) (cue.Value, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {

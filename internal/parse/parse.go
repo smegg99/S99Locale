@@ -180,8 +180,7 @@ func parseFile(res *Result, dir, file, locale string, root int) {
 	walk(res, doc, pre, "", file, locale, root, lines)
 }
 
-// walk descends the document. A node holding "value" or "plural" is a message;
-// anything else is another level of key.
+// walk descends the document; a node with value or plural is a message, anything else a key level.
 func walk(res *Result, node map[string]any, prefix, path, file, locale string, root int, lines lineFinder) {
 	for _, name := range sortedMapKeys(node) {
 		child, ok := node[name].(map[string]any)

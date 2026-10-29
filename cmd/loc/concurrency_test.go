@@ -15,8 +15,7 @@ import (
 	"github.com/smegg99/s99locale/internal/lock"
 )
 
-// Two builds racing on one output must not lose a file: without the lock, one run can remove
-// a file another has just written.
+// Two builds racing on one output must not lose a file the other just wrote.
 func TestConcurrentBuildsDoNotLoseFiles(t *testing.T) {
 	path := project(t, valid)
 	a, _, _ := testApp(t, options{configPath: path})

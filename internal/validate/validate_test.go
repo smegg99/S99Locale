@@ -16,8 +16,7 @@ import (
 	"github.com/smegg99/s99locale/internal/validate"
 )
 
-// project writes a config plus locale files and runs parse and validate.
-// files is locale-relative: "en/common.yaml" -> contents.
+// project writes a config and locale-relative files, then parses and validates them.
 func project(t *testing.T, files map[string]string) *validate.Report {
 	t.Helper()
 	dir := t.TempDir()

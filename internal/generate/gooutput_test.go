@@ -106,8 +106,7 @@ func reload(t *testing.T, cfg *config.Config, from, to string) *config.Config {
 	return next
 }
 
-// buildAt builds the shared fixture and returns the backend record's bytes.
-// spelling is the config path relative to the fixture root; empty means absolute.
+// buildAt builds the shared fixture with the config spelled relative to its root, or absolute when empty.
 func buildAt(t *testing.T, spelling string) []byte {
 	t.Helper()
 	_, _, dir := shared(t)

@@ -198,8 +198,7 @@ func TestAnUnknownTargetKeyInOutputsIsRejected(t *testing.T) {
 	}
 }
 
-// `output: "."` would make the config directory the parent `loc clean` prunes,
-// so it is refused at load, before any command runs.
+// output "." would make the config directory the one clean prunes, so loading refuses it.
 func TestOutputMayNotBeTheConfigDirectory(t *testing.T) {
 	if got := loadErr(t, valid+"\noutput: \".\"\n"); !strings.Contains(got, "not below the config directory") {
 		t.Fatalf("err = %q", got)
@@ -240,8 +239,7 @@ func TestTwoTargetsMayNotShareADirectory(t *testing.T) {
 	}
 }
 
-// A redirect is acted on even for a target that is not built, and nothing
-// else checks where it points.
+// A redirect for a target that is not built is refused, since nothing else checks where it points.
 func TestOutputsMayNotNameATargetThatIsNotBuilt(t *testing.T) {
 	body := `
 defaultLocale: "en"
@@ -255,8 +253,7 @@ outputs: {backend: "../x"}
 	}
 }
 
-// The default -c is relative, and an absolute entry cannot be related to a
-// relative config directory without resolving both.
+// A redirect to the config directory is caught however it is spelled, relative or absolute.
 func TestARedirectToTheConfigDirectoryIsCaughtHoweverItIsSpelled(t *testing.T) {
 	for _, tc := range []struct{ name, suffix string }{
 		{"absolute", ""},
@@ -285,8 +282,7 @@ outputs: {backend: ` + strconv.Quote(dir+tc.suffix) + `}
 	}
 }
 
-// Under a relative -c, an absolute output inside the config directory is as
-// good as the relative spelling of the same directory.
+// Under a relative -c, an absolute output inside the config directory loads like its relative spelling.
 func TestAnAbsoluteOutputInsideTheConfigDirectoryLoads(t *testing.T) {
 	dir := t.TempDir()
 	body := valid + "\noutput: " + strconv.Quote(filepath.Join(dir, "generated")) + "\n"

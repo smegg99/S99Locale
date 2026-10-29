@@ -260,8 +260,7 @@ func (c *Config) abs(p string) string {
 	return filepath.Join(c.Dir, p)
 }
 
-// TargetsFor returns the targets a namespace reaches.
-// A namespace with no entry reaches every target.
+// TargetsFor returns the targets a namespace reaches: its own, else defaultTargets, else every target.
 func (c *Config) TargetsFor(namespace string) []message.Target {
 	ns, ok := c.Namespaces[namespace]
 	if !ok || len(ns.Targets) == 0 {

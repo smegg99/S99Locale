@@ -15,8 +15,7 @@ var versionFile string
 // Declared returns the version embedded from VERSION at the module root.
 func Declared() string { return strings.TrimSpace(versionFile) }
 
-// Version is what `loc --version` prints: the declared version plus a local build's commit and
-// dirty marker.
+// Version is what loc --version prints: the declared version plus a local build's commit and dirty marker.
 func Version() string {
 	rev, dirty, ok := revision()
 	if !ok {

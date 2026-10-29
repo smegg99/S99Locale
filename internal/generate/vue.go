@@ -74,8 +74,7 @@ func vueText(m *message.Message, rule plural.Rule) (string, error) {
 	return strings.Join(parts, " | "), nil
 }
 
-// nest turns common.action.accept into {common: {action: {accept: ...}}} for vue-i18n.
-// The namespace segment stays so two namespaces cannot collide at the root.
+// nest turns common.action.accept into nested maps for vue-i18n, keeping the namespace at the root.
 func nest(root map[string]any, key string, value string) error {
 	parts := strings.Split(key, ".")
 

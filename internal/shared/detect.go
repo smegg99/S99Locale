@@ -221,8 +221,7 @@ func textGroups(cfg *config.Config, keys []string, prints map[string]Fingerprint
 	return out
 }
 
-// gradeText separates "the same everywhere, different contract" from "the same
-// in English only".
+// gradeText separates the same text everywhere with a different contract from the same text in English only.
 func gradeText(cfg *config.Config, group []string, prints map[string]Fingerprint) (Confidence, Reason, map[string]any) {
 	first := prints[group[0]]
 

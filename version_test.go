@@ -50,8 +50,7 @@ func TestVersionStartsWithTheDeclaredVersion(t *testing.T) {
 	}
 }
 
-// A tagged commit's VERSION must match the tag `go install ...@vX` resolves; untagged commits
-// are skipped.
+// A tagged commit's VERSION must match the tag go install resolves; untagged commits skip.
 func TestTagAgreesWithVersionFile(t *testing.T) {
 	tag, ok := exactTag()
 	if !ok {
@@ -64,8 +63,7 @@ func TestTagAgreesWithVersionFile(t *testing.T) {
 	}
 }
 
-// exactTag returns the tag on HEAD. Absent outside a git worktree, which is how
-// `go install` builds this, so that is a skip and not a failure.
+// exactTag returns the tag on HEAD, or false outside a worktree, which is how go install builds.
 func exactTag() (string, bool) {
 	git, err := exec.LookPath("git")
 	if err != nil {

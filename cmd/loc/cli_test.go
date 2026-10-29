@@ -47,8 +47,7 @@ func project(t *testing.T, files map[string]string) string {
 	return path
 }
 
-// testApp builds a command's state over two buffers instead of swapping the process's descriptors,
-// which is unsafe under -race.
+// testApp runs a command over two buffers, since swapping the process's descriptors is unsafe under -race.
 func testApp(t *testing.T, o options) (*app, *bytes.Buffer, *bytes.Buffer) {
 	t.Helper()
 
@@ -409,8 +408,7 @@ func TestUnknownCommandIsRejected(t *testing.T) {
 	}
 }
 
-// main maps errFailed to exit 1 and everything else to exit 2, so CI can tell a failing check
-// from a broken job.
+// A failing check exits 1 and a broken job exits 2, so CI can tell them apart.
 func TestStaleOutputAndBrokenConfigFailDifferently(t *testing.T) {
 	ctx := context.Background()
 

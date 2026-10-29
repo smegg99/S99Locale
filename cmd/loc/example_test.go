@@ -197,8 +197,7 @@ func TestExampleGeneratedGoParses(t *testing.T) {
 	}
 }
 
-// go/format checks only syntax; a mistyped placeholder type fails only at compile time.
-// The example is its own module with go-i18n, so it is compiled here.
+// go/format checks only syntax, so the example module is compiled to catch a mistyped placeholder type.
 func TestExampleGeneratedGoCompiles(t *testing.T) {
 	if testing.Short() {
 		t.Skip("compiling the example needs the module cache")
