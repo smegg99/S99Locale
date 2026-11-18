@@ -36,6 +36,18 @@ var rules = map[string]Rule{
 	"ko": {Required: []message.Category{message.CatOther}},
 	"tr": {Required: []message.Category{message.CatOne, message.CatOther}},
 
+	"da": {Required: []message.Category{message.CatOne, message.CatOther}},
+	"el": {Required: []message.Category{message.CatOne, message.CatOther}},
+	"et": {Required: []message.Category{message.CatOne, message.CatOther}},
+	"fi": {Required: []message.Category{message.CatOne, message.CatOther}},
+	"hu": {Required: []message.Category{message.CatOne, message.CatOther}},
+	"lt": {Required: []message.Category{message.CatOne, message.CatFew, message.CatMany, message.CatOther}},
+	"lv": {Required: []message.Category{message.CatZero, message.CatOne, message.CatOther}},
+	"nb": {Required: []message.Category{message.CatOne, message.CatOther}},
+	"ro": {Required: []message.Category{message.CatOne, message.CatFew, message.CatOther}},
+	"sv": {Required: []message.Category{message.CatOne, message.CatOther}},
+	"th": {Required: []message.Category{message.CatOther}},
+
 	// Languages with a dual. The band order follows CategoryOrder, so `two`
 	// sits between `one` and `few` in every generated pipe string.
 	"sl": {Required: []message.Category{message.CatOne, message.CatTwo, message.CatFew, message.CatOther}},

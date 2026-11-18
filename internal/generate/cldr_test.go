@@ -11,6 +11,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"golang.org/x/text/language"
+
 	"github.com/smegg99/s99locale/internal/config"
 	"github.com/smegg99/s99locale/internal/generate"
 	"github.com/smegg99/s99locale/internal/parse"
@@ -68,6 +71,39 @@ func TestGeneratedIndexAgreesWithCLDRForEveryLocale(t *testing.T) {
 	}
 }
 
+func TestGeneratedGoPluralForms(t *testing.T) {
+	counts := []int{0, 1, 2, 11, 20, 21, 22, 101}
+	cases := map[string]string{
+		"da": "other one other other other other other other",
+		"el": "other one other other other other other other",
+		"et": "other one other other other other other other",
+		"fi": "other one other other other other other other",
+		"hu": "other one other other other other other other",
+		"lt": "other one few other other one few one",
+		"lv": "zero one other zero zero one other one",
+		"nb": "other one other other other other other other",
+		"ro": "few one few few other other other few",
+		"sv": "other one other other other other other other",
+		"th": "other other other other other other other other",
+	}
+	out := localesProject(t, plural.Locales())
+	for tag, expected := range cases {
+		t.Run(tag, func(t *testing.T) {
+			bundle := i18n.NewBundle(language.Make(tag))
+			if _, err := bundle.ParseMessageFileBytes(file(t, out, "backend/locales/"+tag+".json"), tag+".json"); err != nil {
+				t.Fatal(err)
+			}
+			localizer := i18n.NewLocalizer(bundle, tag)
+			for i, want := range strings.Fields(expected) {
+				got, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: "app.files", PluralCount: counts[i]})
+				if err != nil || got != want {
+					t.Errorf("count %d: got %q (%v), want %q", counts[i], got, err, want)
+				}
+			}
+		})
+	}
+}
+
 // localesProject builds a project with one plural per locale, each form named after its category.
 func localesProject(t *testing.T, locales []string) *generate.Outputs {
 	t.Helper()
@@ -94,7 +130,7 @@ func localesProject(t *testing.T, locales []string) *generate.Outputs {
 	}
 	cfgPath := filepath.Join(dir, "config.cue")
 	writeFile(t, cfgPath, fmt.Appendf(nil,
-		"defaultLocale: \"en\"\nlocales: [%s]\ntargets: [\"web\"]\nroots: [\"locales\"]\noutput: \"generated\"\n",
+		"defaultLocale: \"en\"\nlocales: [%s]\ntargets: [\"web\", \"backend\"]\nroots: [\"locales\"]\noutput: \"generated\"\n",
 		strings.Join(quoted, ", ")))
 
 	cfg, err := config.Load(context.Background(), cfgPath)

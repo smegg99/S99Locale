@@ -44,6 +44,7 @@ type Placeholder struct {
 type Category string
 
 const (
+	CatZero  Category = "zero"
 	CatOne   Category = "one"
 	CatTwo   Category = "two"
 	CatFew   Category = "few"
@@ -52,7 +53,7 @@ const (
 )
 
 // CategoryOrder is the band order for every generated pipe string and index function.
-var CategoryOrder = []Category{CatOne, CatTwo, CatFew, CatMany, CatOther}
+var CategoryOrder = []Category{CatZero, CatOne, CatTwo, CatFew, CatMany, CatOther}
 
 func ParseCategory(s string) (Category, error) {
 	for _, c := range CategoryOrder {

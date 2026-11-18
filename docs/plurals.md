@@ -9,12 +9,14 @@ From CLDR, the same data go-i18n's rules are generated from.
 
 | locale | required |
 |---|---|
-| en, de, es, fr, it, nl, pt, tr | one, other |
-| pl, ru, uk, cs, sk | one, few, many, other |
+| da, de, el, en, es, et, fi, fr, hu, it, nb, nl, pt, sv, tr | one, other |
+| cs, lt, pl, ru, sk, uk | one, few, many, other |
+| lv | zero, one, other |
+| ro | one, few, other |
 | sl | one, two, few, other |
 | ga | one, two, few, many, other |
 | he | one, two, other |
-| ja, zh, ko | other |
+| ja, ko, th, zh | other |
 
 Declaring a category a locale does not have is an error. A `few` in English is
 text no rule will ever select.
@@ -29,7 +31,7 @@ vue-i18n takes a pipe string, in band order:
 {count} głos | {count} głosy | {count} głosów | {count} głosów
 ```
 
-Order is `[one, two?, few?, many?, other]`, filtered to what the message
+Order is `[zero, one, two, few, many, other]`, filtered to what the message
 declares. vue-i18n only indexes into the bands, so `plurals.gen.ts` ships the
 index function alongside:
 
