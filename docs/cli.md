@@ -42,15 +42,15 @@ unsupported `LOC_LANG` falls back to English.
 ## Install
 
 ```sh
-go get -tool github.com/smegg99/s99locale/cmd/loc@v1.1.1
+go get -tool github.com/smegg99/s99locale/cmd/loc@v1.1.2
 go tool loc build -c i18n/config.cue
 ```
 
 The version is pinned in the consuming repository's own `go.mod`, so every
 machine that builds it runs the same `loc`.
 
-`loc --version` prints `loc 1.1.1` from a pinned tool directive and
-`loc 1.1.1 (a22e8d3, dirty)` from a working tree.
+`loc --version` prints `loc 1.1.2` from a pinned tool directive and
+`loc 1.1.2 (a22e8d3, dirty)` from a working tree.
 
 Runs serialise on one advisory lock per target directory, so `loc watch` and a
 manual `loc build` cannot interleave. `check` takes shared locks, so concurrent
